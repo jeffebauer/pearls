@@ -45,3 +45,6 @@ build
 *_BETA.sch
 *_beta.brd
 *_BETA.brd
+beads_test
+renders/
+audio_samples/
