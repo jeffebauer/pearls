@@ -10,4 +10,4 @@ Stock Beads fixes each grain's gain at birth to 1/√(active grains + 1). Loudne
 ## Consequences
 
 - It costs one multiply-add per grain per sample. Measure CPU on the debug pin before landing it.
-- The wet post-gain is set to 0.75, matching dry, before this lands, so the level is set once.
+- The wet post-gain is set from measurement before this lands (ticket 04), then re-checked after it with the same check command, since the envelope sum changes the wet level. (Originally "set to 0.75, so the level is set once"; changed 8 November 2026 when ticket 01 measured the stock wet at +4.1 dB, not 6.)

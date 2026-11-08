@@ -8,7 +8,7 @@ Settled by grilling on 8 November 2026. Source brief: https://claude.ai/artifact
 
 Compared with the Arbhar, stock Pearls' wet signal is hot, edgy and level-unstable:
 
-- The wet sits 6 dB above the dry at 12 o'clock, so the useful mix lives around 9 o'clock.
+- The wet sits above the dry at 12 o'clock, so the useful mix lives around 9 o'clock. The gain constants differ by 6 dB (1.5 against 0.75). Measured on a dense cloud, the wet is +4.1 dB, and the gap varies with Density (ticket 01).
 - Grain gain is fixed at birth, so loudness depends on spawn history and jumps as density changes.
 - Windows have corners, and attacks can be as short as 0.5 ms. Voice stealing fades over 5 ms. Both cause clicks and broadband splatter.
 - There is no soft end of Shape. The bell sits about two-thirds of the way round, followed by reverse.
@@ -26,7 +26,7 @@ Get a soft, smooth, Arbhar-like wet character without giving up live, always-on 
    - grain attack time, which the harness can log because it sees each grain's envelope
    
    Clip 09 from the Sublustris demos (picked D chords, CC0 Emily guitar) is the reference source for the harness, the Arbhar and the Multigrain. The synthetic `kettel.wav` stays as a regression check. Hardware captures get level and click metrics only.
-2. **Wet gain** goes from 1.5 to 0.75, matching dry (0.5625 each at 12 o'clock).
+2. **Wet gain** is set from measurement, not fixed at 0.75: whatever value brings the check command's dense patch within 1 dB of the dry by gated RMS (about 0.94 on stock). It is re-checked after decision 3 lands, since normalisation changes the wet level. Changed 8 November 2026 after ticket 01 measured +4.1 dB, not 6.
 3. **Envelope-sum normalisation** replaces per-grain 1/√n at birth (ADR 0004):
    - a bus gain g = 1/√(max(Σenv², 1)), falling fast and recovering slowly
    - pan spread stays count-based
