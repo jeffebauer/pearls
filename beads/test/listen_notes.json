@@ -22,49 +22,9 @@
       "label": "10 · Diffuser",
       "description": "The diffuser as picked: kap 0.5 with the first line of each channel slowly modulated, on the wet bus, faded in with an equal-power blend from Hann (off) to fully clockwise (full). Includes every earlier change. Below Hann these are byte-identical to 09."
     },
-    "renders/10-diffuser/sweep/control": {
-      "label": "10 sweep · kap 0.625 (current)",
-      "description": "Clouds' coefficient, lines fixed. The version you heard as metallic."
-    },
-    "renders/10-diffuser/sweep/kap050": {
-      "label": "10 sweep · kap 0.5",
-      "description": "Lower allpass coefficient, lines fixed. Shorter ring, still dense."
-    },
-    "renders/10-diffuser/sweep/kap040": {
-      "label": "10 sweep · kap 0.4",
-      "description": "Lower again. Ring is about half as long as 0.625, and transients start to show through."
-    },
-    "renders/10-diffuser/sweep/kap030": {
-      "label": "10 sweep · kap 0.3",
-      "description": "Lowest. Shortest ring, least smear; grain edges mostly survive."
-    },
-    "renders/10-diffuser/sweep/smear": {
-      "label": "10 sweep · kap 0.625, modulated",
-      "description": "Clouds' coefficient, with each channel's first line slowly modulated (0.5 and 0.3 Hz), as in the reverb. The delays no longer sit still."
-    },
-    "renders/10-diffuser/sweep/smear_kap050": {
-      "label": "10 sweep · kap 0.5, modulated",
-      "description": "Lower coefficient plus the same slow modulation."
-    },
     "renders/sources": {
       "label": "Sources · dry",
       "description": "Extra dry sources: picked guitar (Sublustris clip 09, CC0 Emily guitar), sustained poly synth chords (clip 08, synthesised), drum groove with stabs (clip 03, CC0 drums). 30 s, looped where shorter."
-    },
-    "renders/10-diffuser/sources/kettel": {
-      "label": "10 variants · Test source",
-      "description": "The diffuser variants at Shape fully clockwise on the usual synthetic test source: plucks, a pad and sparse hits."
-    },
-    "renders/10-diffuser/sources/guitar": {
-      "label": "10 variants · Guitar",
-      "description": "The diffuser variants at Shape fully clockwise on picked guitar chords. Bright, with long ringing tails: listen to the tails."
-    },
-    "renders/10-diffuser/sources/synth": {
-      "label": "10 variants · Synth chords",
-      "description": "The diffuser variants at Shape fully clockwise on sustained poly synth chords. Held pitches show ring most clearly: start here."
-    },
-    "renders/10-diffuser/sources/groove": {
-      "label": "10 variants · Drum groove",
-      "description": "The diffuser variants at Shape fully clockwise on a drum groove with stabs. Broadband and transient: listen for how much the hits soften."
     },
     "renders/04-wet-gain": {
       "label": "04 · Wet gain 0.94",
@@ -74,97 +34,22 @@
       "label": "05 · Envelope-sum normalisation",
       "description": "The wet bus is scaled by 1/max(Σenv, 1) instead of 1/√n per grain at birth. Includes ticket 04."
     },
-    "renders/05-envelope-sum/pre": {
-      "label": "05 sweep · Before (per-grain 1/√n)",
-      "description": "Stock normalisation, with ticket 04's gain. The baseline for the exponent sweep."
-    },
-    "renders/05-envelope-sum/q1": {
-      "label": "05 sweep · Linear, q = 1 (chosen)",
-      "description": "Bus scaled by 1/max(Σenv, 1). Flat level across Density 0.6–0.9; what shipped."
-    },
-    "renders/05-envelope-sum/q2": {
-      "label": "05 sweep · Square root, q = 2",
-      "description": "Bus scaled by 1/max(√Σenv², 1), as ADR 0004 first named. Gets louder as Density rises, and clips."
-    },
     "renders/06-wet-saturator": {
       "label": "06 · Wet saturator at −6 dBFS",
       "description": "Wet bus untouched below −6 dBFS, then a tanh curve toward 0 dBFS. Includes 04 and 05."
-    },
-    "renders/06-wet-saturator/sweep/off": {
-      "label": "06 sweep · Saturator off",
-      "description": "Ticket 05's code. Overs go straight to the stock limiter, and the hot render clips 7 samples."
-    },
-    "renders/06-wet-saturator/sweep/m06": {
-      "label": "06 sweep · Knee at −6 dBFS (chosen)",
-      "description": "Touches about 0.04% of samples in the hot render: a safety net for overs, no colour in normal playing."
-    },
-    "renders/06-wet-saturator/sweep/m09": {
-      "label": "06 sweep · Knee at −9 dBFS",
-      "description": "Touches about 0.3% of samples in the hot render. Peaks of dense clouds start to round off."
-    },
-    "renders/06-wet-saturator/sweep/m12": {
-      "label": "06 sweep · Knee at −12 dBFS",
-      "description": "Touches about 1.6% of samples in the hot render. The most audible softening of the four."
     },
     "renders/07-min-attack": {
       "label": "07 · Minimum attack 3 ms",
       "description": "Grain attack floor raised from 0.5 ms to 3 ms. Includes 04, 05 and 06."
     },
-    "renders/07-min-attack/sweep/a0p5": {
-      "label": "07 sweep · 0.5 ms floor (before)",
-      "description": "Ticket 06's code, unchanged. Granular player render: 412 clicks."
-    },
-    "renders/07-min-attack/sweep/a1": {
-      "label": "07 sweep · 1 ms floor",
-      "description": "Minimum grain attack doubled. Granular player render: 393 clicks, about level with stock's 395."
-    },
-    "renders/07-min-attack/sweep/a2": {
-      "label": "07 sweep · 2 ms floor",
-      "description": "Granular player render: 389 clicks."
-    },
-    "renders/07-min-attack/sweep/a3": {
-      "label": "07 sweep · 3 ms floor (chosen)",
-      "description": "Granular player render: 359 clicks, 9% under stock."
-    },
-    "renders/07-min-attack/sweep/a5": {
-      "label": "07 sweep · 5 ms floor",
-      "description": "The softest tested. Granular player render: 325 clicks, 18% under stock. Listen for transients losing their edge."
-    },
     "renders/08-voice-stealing-fade": {
       "label": "08 · Current code",
       "description": "Includes 04 to 07. Ticket 08 kept the 5 ms fade, so the DSP is unchanged from 07."
-    },
-    "renders/08-voice-stealing-fade/sweep/f5": {
-      "label": "08 sweep · 5 ms fade (kept)",
-      "description": "Voice-stealing fade unchanged, bit-identical to ticket 07 on the shared renders."
-    },
-    "renders/08-voice-stealing-fade/sweep/f10": {
-      "label": "08 sweep · 10 ms fade",
-      "description": "Fade doubled. Click counts unchanged. The difference from 5 ms is about 40 dB below the signal on the wet render."
-    },
-    "renders/08-voice-stealing-fade/sweep/f15": {
-      "label": "08 sweep · 15 ms fade",
-      "description": "Click counts unchanged. The difference from 5 ms is about 36 dB below the signal on the wet render."
-    },
-    "renders/08-voice-stealing-fade/sweep/f20": {
-      "label": "08 sweep · 20 ms fade",
-      "description": "The longest the scheduler ordering allows here. Click counts unchanged. The difference from 5 ms is about 34 dB below the signal on the wet render."
     },
     "renders/16-wet-level": {
       "label": "16 · Wet level with random Time",
       "description": "Bus gain blends from 1/sum towards 1/sqrt(sum) when Time or Pitch is randomised. Max blend 0.75, sensitivity 100. Renders with fixed Time are bit-identical to 08."
     },
-    "renders/16-wet-level/sweep/m0": { "label": "16 sweep · blend 0 (before)", "description": "Ticket 08's maths. Cloud 4 dB under the dry." },
-    "renders/16-wet-level/sweep/m25": { "label": "16 sweep · blend 0.25", "description": "Cloud 2.4 dB under the dry." },
-    "renders/16-wet-level/sweep/m40": { "label": "16 sweep · blend 0.4", "description": "Cloud 1.6 dB under the dry." },
-    "renders/16-wet-level/sweep/m50": { "label": "16 sweep · blend 0.5", "description": "Cloud 1.1 dB under the dry." },
-    "renders/16-wet-level/sweep/m60": { "label": "16 sweep · blend 0.6", "description": "Cloud 0.6 dB under the dry." },
-    "renders/16-wet-level/sweep/m75": { "label": "16 sweep · blend 0.75 (chosen)", "description": "Cloud 0.1 dB over the dry." },
-    "renders/16-wet-level/sweep/m100": { "label": "16 sweep · blend 1.0", "description": "Full 1/sqrt(sum). Cloud 1.1 dB over the dry." },
-    "renders/16-wet-level/sweep-scale/s20": { "label": "16 sensitivity · 20", "description": "Max blend 0.75. Level dips about 3 dB at very small Time spreads." },
-    "renders/16-wet-level/sweep-scale/s50": { "label": "16 sensitivity · 50", "description": "Max blend 0.75. Level dips about 1.5 dB at Time spread 0.01." },
-    "renders/16-wet-level/sweep-scale/s100": { "label": "16 sensitivity · 100 (chosen)", "description": "Max blend 0.75. Level is flat from Time spread 0.01 up." },
-    "renders/16-wet-level/sweep-scale/s200": { "label": "16 sensitivity · 200", "description": "Max blend 0.75. Same as 100." },
     "renders/check": {
       "label": "Latest check run",
       "description": "Whatever the working tree rendered on the last `measure.py --check`. Not a fixed version."
@@ -172,14 +57,6 @@
     "renders/11-random-grain-level": {
       "label": "11: random grain level",
       "description": "Each grain gets a random level at birth, spread over 6 dB and growing across Density's random half. Make-up gain holds the average, so the cloud keeps its level."
-    },
-    "renders/11-random-grain-level/sources": {
-      "label": "11: cloud before and after, four sources",
-      "description": "The cloud patch at Density 0.9, which is about 80% of the full depth. 'Before' is the commit just before this change."
-    },
-    "renders/11-random-grain-level/density-before": {
-      "label": "11: Density sweep, before the change",
-      "description": "The control for the Density sweep. Density 0 to 0.4 is byte-identical to the 11 folder."
     }
   },
 
@@ -224,22 +101,7 @@
     "guitar.wav": "Picked guitar chords in D, dry.",
     "synth.wav": "Sustained poly synth chords, dry.",
     "groove.wav": "Drum groove with stabs, dry.",
-    "nodiffuser.wav": {"label": "No diffuser (reference)", "about": "Plain Gaussian grains, nothing added. Use it to hear what each diffuser brings and what it costs."},
-    "control.wav": {"label": "Fixed lines, kap 0.625 (the metallic one)", "about": "What you flagged. Longest ring of the fixed versions. Listen for the pitched, tinny tail on held notes, then compare the others against it."},
-    "kap050.wav": {"label": "Fixed lines, kap 0.5", "about": "Same delays, shorter ring. Listen for whether the tinny tail gets shorter but keeps the same colour."},
-    "kap040.wav": {"label": "Fixed lines, kap 0.4", "about": "Ring about half as long as 0.625. Listen for grain edges starting to come back: is it still soft?"},
-    "kap030.wav": {"label": "Fixed lines, kap 0.3", "about": "Shortest ring, least smear, closest to no diffuser. Listen for whether it's still doing enough to be worth having."},
-    "smear.wav": {"label": "Modulated, kap 0.625", "about": "Full smear, but the first delay drifts slowly so no fixed pitch can build. Listen for the tinny tail going, and for any chorus or wobble it adds."},
-    "smear_kap050.wav": {"label": "Modulated, kap 0.5", "about": "Shorter ring plus the drift. Listen for whether it's the cleanest, and whether it has lost depth against the 0.625 version."},
     "beads_shape_088.wav": "Cloud patch, Shape halfway from 3 o'clock to fully clockwise. 10: half Hann-to-Gaussian, half diffuser.",
-    "beads_shape_100.wav": "Cloud patch, Shape fully clockwise. 09: Gaussian. 10: Gaussian with the full diffuser. Stock: reverse.",
-    "cloud_kettel_before.wav": {"label": "Test source: before", "about": "Every grain at the same level. The reference for texture."},
-    "cloud_kettel_after.wav": {"label": "Test source: random level", "about": "Listen for grains standing forward and back, rather than an even wash."},
-    "cloud_guitar_before.wav": {"label": "Guitar: before", "about": "Every grain at the same level. The reference for texture."},
-    "cloud_guitar_after.wav": {"label": "Guitar: random level", "about": "Picked notes show it best. Listen for movement in the cloud, and whether it turns uneven or lumpy."},
-    "cloud_synth_before.wav": {"label": "Synth: before", "about": "Every grain at the same level. The reference for texture."},
-    "cloud_synth_after.wav": {"label": "Synth: random level", "about": "Sustained chords hide timing, so any added shimmer is the level. Listen for a gentle flutter versus a wobble."},
-    "cloud_groove_before.wav": {"label": "Groove: before", "about": "Every grain at the same level. The reference for texture."},
-    "cloud_groove_after.wav": {"label": "Groove: random level", "about": "Listen for whether the transients still feel even, or whether some drop out."}
+    "beads_shape_100.wav": "Cloud patch, Shape fully clockwise. 09: Gaussian. 10: Gaussian with the full diffuser. Stock: reverse."
   }
 }
