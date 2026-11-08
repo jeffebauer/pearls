@@ -51,9 +51,6 @@
 #include "beads/dsp/wavetable_granular_player.h"
 #include "beads/dsp/wavetable_voice.h"
 
-#include "clouds/dsp/frame.h"
-#include "clouds/dsp/fx/diffuser.h"
-
 using namespace beads;
 using namespace std;
 using namespace stmlib;
@@ -1148,41 +1145,86 @@ void TestProcessorShapeSweep() {
   }
 }
 
-// The wet diffuser (ticket 10): sample-for-sample against Clouds' own at 32 kHz,
-// bypass at amount 0, how far it spreads an impulse at 48 kHz, and the amount
-// the processor picks from Shape. Read by beads/test/checks.py.
+// One impulse down the left of a diffuser that's already fully in.
+static void DiffuserImpulse(Diffuser* diffuser, int length, vector<float>* out) {
+  out->clear();
+  for (int block = 0; block < length / int(kBlockSize); ++block) {
+    FloatFrame a[kBlockSize];
+    fill(&a[0].l, &a[0].l + kBlockSize * 2, 0.0f);
+    if (block == 0) a[0].l = 1.0f;
+    diffuser->Process(a, kBlockSize);
+    for (size_t i = 0; i < kBlockSize; ++i) out->push_back(a[i].l);
+  }
+}
+
+static void DiffuserSettle(Diffuser* diffuser, int samples) {
+  for (int block = 0; block < samples / int(kBlockSize); ++block) {
+    FloatFrame a[kBlockSize];
+    fill(&a[0].l, &a[0].l + kBlockSize * 2, 0.0f);
+    diffuser->Process(a, kBlockSize);
+  }
+}
+
+// Where an impulse's energy sits, in samples.
+static float EnergyCentroid(const vector<float>& v) {
+  float sum = 0.0f, moment = 0.0f;
+  for (size_t i = 0; i < v.size(); ++i) {
+    sum += v[i] * v[i];
+    moment += float(i) * v[i] * v[i];
+  }
+  return sum > 0.0f ? moment / sum : 0.0f;
+}
+
+// The wet diffuser (ticket 10): timing against sample rate, bypass at amount
+// 0, whether its delays move, how long it rings and how far it spreads an
+// impulse at 48 kHz, and the amount the processor picks from Shape. Read by
+// beads/test/checks.py.
 void TestDiffuser() {
   FILE* fp = fopen("beads_diffuser_values.csv", "w");
   fprintf(fp, "key,value\n");
 
   static Diffuser diffuser;
-  static float clouds_buffer[2048];
-  static clouds::Diffuser clouds_diffuser;
-  clouds_diffuser.Init(clouds_buffer);
-  clouds_diffuser.set_amount(1.0f);
+  vector<float> ir32, ir48, ir48_later;
+
   diffuser.Init(32000.0f);
   diffuser.set_amount(1.0f);
+  DiffuserSettle(&diffuser, int(kBlockSize));
+  DiffuserImpulse(&diffuser, 6400, &ir32);
 
-  WavWriter wav_writer(2, 32000, 2);
-  wav_writer.Open("beads_diffuser.wav");
-  float max_diff = 0.0f;
-  for (int block = 0; block < 64000 / int(kBlockSize); ++block) {
-    FloatFrame a[kBlockSize];
-    clouds::FloatFrame b[kBlockSize];
-    for (size_t i = 0; i < kBlockSize; ++i) {
-      a[i].l = b[i].l = 0.5f * (Random::GetFloat() - 0.5f);
-      a[i].r = b[i].r = 0.5f * (Random::GetFloat() - 0.5f);
-    }
-    diffuser.Process(a, kBlockSize);
-    clouds_diffuser.Process(b, kBlockSize);
-    if (block == 0) continue;  // Our amount ramps in over the first block.
-    for (size_t i = 0; i < kBlockSize; ++i) {
-      max_diff = max(max_diff, fabsf(a[i].l - b[i].l));
-      max_diff = max(max_diff, fabsf(a[i].r - b[i].r));
-      wav_writer.Write(&a[i].l, &a[i].r, 1);
-    }
+  diffuser.Init(48000.0f);
+  diffuser.set_amount(1.0f);
+  DiffuserSettle(&diffuser, int(kBlockSize));
+  DiffuserImpulse(&diffuser, 9600, &ir48);
+  fprintf(fp, "timing_ratio_32k_48k,%.6f\n",
+          EnergyCentroid(ir32) / EnergyCentroid(ir48));
+
+  // Remaining energy falling to -30 dB of the total.
+  float total = 0.0f;
+  for (size_t i = 0; i < ir48.size(); ++i) total += ir48[i] * ir48[i];
+  float tail = 0.0f;
+  size_t ring_end = ir48.size();
+  for (size_t i = ir48.size(); i-- > 0;) {
+    tail += ir48[i] * ir48[i];
+    if (tail >= 0.001f * total) { ring_end = i; break; }
   }
-  fprintf(fp, "clouds_max_diff,%.9f\n", max_diff);
+  fprintf(fp, "ring_30db_ms,%.3f\n", float(ring_end) * 1000.0f / 48000.0f);
+
+  // The same impulse 1.25 s later, once the delays have had time to move.
+  DiffuserSettle(&diffuser, 60000);
+  DiffuserImpulse(&diffuser, 9600, &ir48_later);
+  float moved = 0.0f;
+  for (size_t i = 0; i < ir48.size(); ++i) {
+    moved = max(moved, fabsf(ir48[i] - ir48_later[i]));
+  }
+  fprintf(fp, "impulse_moved,%.6f\n", moved);
+
+  WavWriter wav_writer(2, 48000, 1);
+  wav_writer.Open("beads_diffuser.wav");
+  for (size_t i = 0; i < ir48.size(); ++i) {
+    float sample = ir48[i];
+    float copy = ir48[i];
+    wav_writer.Write(&sample, &copy, 1);
+  }
 
   diffuser.Init(48000.0f);
   float bypass_diff = 0.0f;

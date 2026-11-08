@@ -203,18 +203,38 @@ def diffuser_values(m):
     return m["beads_diffuser.wav"].get("values", {})
 
 
-# Ticket 10: the port at 32 kHz is Clouds' diffuser, sample for sample.
-MAX_CLOUDS_DIFF = 1e-5
+# Ticket 10: the diffuser takes the same time in seconds at any sample rate, so
+# in samples 32 kHz is 2/3 of 48 kHz. It started as a sample-exact port of
+# Clouds; kap and the modulation were then changed by ear (see the ticket).
+TIMING_RATIO = 2.0 / 3.0
+MAX_TIMING_ERROR = 0.03
 
 
-def diffuser_matches_clouds(m):
+def diffuser_timing_scales(m):
     v = diffuser_values(m)
     if not v:
         return False, "no diffuser values logged"
-    diff, bypass = v["clouds_max_diff"], v["bypass_max_diff"]
-    return diff <= MAX_CLOUDS_DIFF and bypass == 0.0, (
-        "largest difference from Clouds at 32 kHz %.2e (limit %.0e), "
-        "at amount 0 %.2e (must be 0)" % (diff, MAX_CLOUDS_DIFF, bypass))
+    ratio, bypass = v["timing_ratio_32k_48k"], v["bypass_max_diff"]
+    return abs(ratio - TIMING_RATIO) <= MAX_TIMING_ERROR and bypass == 0.0, (
+        "32 kHz timing is %.3f of 48 kHz in samples (wants %.3f), "
+        "at amount 0 differs by %.2e (must be 0)" % (ratio, TIMING_RATIO, bypass))
+
+
+# Ticket 10: fixed delays ring metallic. The delays must move, so the same
+# impulse a moment later comes out different.
+MIN_IMPULSE_MOVED = 0.02
+MAX_RING_30DB_MS = 113.0
+
+
+def diffuser_not_metallic(m):
+    v = diffuser_values(m)
+    if not v:
+        return False, "no diffuser values logged"
+    moved, ring = v["impulse_moved"], v["ring_30db_ms"]
+    return moved >= MIN_IMPULSE_MOVED and ring <= MAX_RING_30DB_MS, (
+        "impulse moved by %.3f over 1.25 s (needs %.2f or more), "
+        "ring to -30 dB %.1f ms (limit %.1f)"
+        % (moved, MIN_IMPULSE_MOVED, ring, MAX_RING_30DB_MS))
 
 
 def diffuser_spreads_energy(m):
@@ -276,8 +296,11 @@ CHECKS = [
     Check("Shape morph continuous, windows reach zero at both edges",
           ["TestGrainEnvelopeShape"], shape_continuous_with_zero_edges),
     # Ticket 10 (these three fail on the pass-through diffuser).
-    Check("diffuser matches Clouds at 32 kHz, bypassed at amount 0",
-          ["TestDiffuser"], diffuser_matches_clouds),
+    Check("diffuser timing scales with sample rate, bypassed at amount 0",
+          ["TestDiffuser"], diffuser_timing_scales),
+    # Ticket 10 (fails on Clouds' fixed lines at kap 0.625).
+    Check("diffuser's delays move and its ring is shorter",
+          ["TestDiffuser"], diffuser_not_metallic),
     Check("diffuser spreads an impulse without changing its energy",
           ["TestDiffuser"], diffuser_spreads_energy),
     Check("diffuser amount follows Shape from Hann up, off in delay mode",
