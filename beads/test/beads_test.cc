@@ -2130,60 +2130,79 @@ void TestFreezeGlitch() {
   }
 }
 
-int main(void) {
+struct NamedTest {
+  const char* name;
+  void (*fn)();
+};
+
+const NamedTest kTests[] = {
+  { "TestDelayLine", &TestDelayLine },
+  { "TestGrain", &TestGrain },
+  { "TestPanMatrix", &TestPanMatrix },
+  { "TestGrainFade", &TestGrainFade },
+  { "TestHeadCrossingPolicies", &TestHeadCrossingPolicies },
+  { "TestTriggerGenerator", &TestTriggerGenerator },
+  { "TestTriggerGeneratorExpoFM", &TestTriggerGeneratorExpoFM },
+  { "TestRandomizedParameter", &TestRandomizedParameter },
+  { "TestGranularPlayer", &TestGranularPlayer },
+  { "TestMultitapDelay", &TestMultitapDelay },
+  { "TestRandomPanning", &TestRandomPanning },
+  { "TestSubsampleTriggering", &TestSubsampleTriggering },
+  { "TestGranularProcessor", &TestGranularProcessor },
+  { "TestProcessor", &TestProcessor },
+  { "TestProcessorDelay", &TestProcessorDelay },
+  { "TestProcessorDelayBW", &TestProcessorDelayBW },
+  { "TestProcessorDelayTimeXFade", &TestProcessorDelayTimeXFade },
+  { "TestProcessorTapDelay", &TestProcessorTapDelay },
+  { "TestProcessorTapDelayGlitch", &TestProcessorTapDelayGlitch },
+  { "TestProcessorTapDelayTempoChange", &TestProcessorTapDelayTempoChange },
+  { "TestProcessorTapDelayDensityModulation", &TestProcessorTapDelayDensityModulation },
+  { "TestProcessorDelayGranularXFade", &TestProcessorDelayGranularXFade },
+  { "TestWowAndFlutter", &TestWowAndFlutter },
+  { "TestProcessorMonophonicMode", &TestProcessorMonophonicMode },
+  { "TestWavetableGrain", &TestWavetableGrain },
+  { "TestWavetableGranularPlayer", &TestWavetableGranularPlayer },
+  { "TestSynth", &TestSynth },
+  { "TestSynthWavetableScanGlitch", &TestSynthWavetableScanGlitch },
+  { "TestSynthSimpleSweep", &TestSynthSimpleSweep },
+  { "TestSynthFrequencySweep", &TestSynthFrequencySweep },
+  { "TestGateOut", &TestGateOut },
+  { "TestAudioRateTriggerGenerator", &TestAudioRateTriggerGenerator },
+  { "TestDelayModulation", &TestDelayModulation },
+  { "TestFreezeGlitch", &TestFreezeGlitch },
+};
+
+// Usage: beads_test [TestName ...]
+// With no arguments, runs TestProcessor. "list" prints the available tests.
+int main(int argc, char** argv) {
   buffers[0] = block_1;
   buffers[1] = block_1 + (256 * 1024);
   buffers[2] = block_2;
-  
-  // TestDelayLine();
-  // TestGrain();
-  // TestPanMatrix();
-  
-  // TestGrainFade();
-  // TestHeadCrossingPolicies();
-  // TestTriggerGenerator();
-  // TestTriggerGeneratorExpoFM();
-  
-  // TestRandomizedParameter();
-  
-  // TestGranularPlayer();
-  // TestMultitapDelay();
-  // TestRandomPanning();
-  // TestSubsampleTriggering();
 
-  // TestGranularProcessor();
-  // TestProcessor();
-  // TestProcessorDelay();
-  // TestProcessorDelayBW();
-  // TestProcessorDelayTimeXFade();
-  // TestProcessorTapDelay();
-  // TestProcessorTapDelayDensityModulation();
-  // TestProcessorTapDelayGlitch();
-  // TestProcessorTapDelayTempoChange();
-  
-  // TestProcessorDelayGranularXFade();
-  
-  // TestWowAndFlutter();
-  
-  // TestProcessorMonophonicMode();
-  
-  // TestHysteresisFilter();
-  
-  // TestDelayModulation();
-  // TestFreezeGlitch();
-    
-  // TestWavetableGrain();
-  // TestWavetableGranularPlayer();
-  // TestSynth();
-  // TestSynthWavetableScanGlitch();
-  // TestSynthSimpleSweep();
-  // TestSynthFrequencySweep();
-  
-  // TestAudioRateTriggerGenerator();
-  
-  // TestSRCDown();
-
-  // TestGateOut();
-  
-  //TestFreezeGlitch();
+  const size_t num_tests = sizeof(kTests) / sizeof(kTests[0]);
+  if (argc < 2) {
+    TestProcessor();
+    return 0;
+  }
+  for (int a = 1; a < argc; ++a) {
+    if (string(argv[a]) == "list") {
+      for (size_t t = 0; t < num_tests; ++t) {
+        printf("%s\n", kTests[t].name);
+      }
+      continue;
+    }
+    bool found = false;
+    for (size_t t = 0; t < num_tests; ++t) {
+      if (string(argv[a]) == kTests[t].name) {
+        printf("Running %s\n", kTests[t].name);
+        kTests[t].fn();
+        found = true;
+      }
+    }
+    if (!found) {
+      fprintf(stderr, "Unknown test: %s\n", argv[a]);
+      return 1;
+    }
+  }
+  return 0;
 }
