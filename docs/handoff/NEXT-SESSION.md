@@ -34,7 +34,7 @@ Nothing. Tree clean apart from this handoff, no branches or worktrees. The `list
 - **The wet level depends on the patch:** the check uses Density 0.9 and gated RMS. See ticket 01's Comments for the density table.
 - **The click detector flags `kettel.wav`'s own note onsets** (85 in the dry render). Compare click counts against dry and stock, not as absolutes.
 - **The attack probe** is a test-only hook in `grain_envelope.h` (`#ifdef TEST`). Keep the two probe calls when ticket 09 rewrites the file.
-- **`kInstantCrossfadeTime` is tied to the scheduler thresholds** (`granular_player.h:41`). Ticket 08 must check that ordering still holds.
+- **`kInstantCrossfadeTime` is tied to the scheduler thresholds** (`granular_player.h:43`). Ticket 08 must check that ordering still holds.
 - **Always build with `./firmware.sh`, never bare `make`** (ADR 0002).
 - **Reference source:** clip 09 of the Sublustris demos. Built by `~/Documents/Sites/sublustris-versio/docs/minisite/tools/demos/build_sources.py`, which writes float WAV, and the harness reads 16-bit, so convert. Don't use the lossy `*-dry.mp3`.
 
@@ -52,6 +52,6 @@ At `d4381c0`. Since then: tooling and docs only, no DSP changes.
 
 - `.scratch/soft-character/issues/05-envelope-sum-normalisation.md`: the next ticket
 - `docs/adr/` (ADR 0004) and `.scratch/soft-character/spec.md`, decision 3
-- `beads/dsp/granular_player.h`: the per-grain gain at line 122, `kInstantCrossfadeTime` at line 41
+- `beads/dsp/granular_player.h`: the per-grain gain at line 122, `kInstantCrossfadeTime` at line 43
 - `beads/test/checks.py`: add ticket 05's check here first
 - `.scratch/soft-character/issues/04-wet-gain-matches-dry.md`: Comments, the method to repeat if the gain needs re-tuning
