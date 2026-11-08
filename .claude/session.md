@@ -52,7 +52,7 @@ make -f beads/test/makefile 2>&1 | grep -E "(error|warning):" ; test -x beads_te
 python3 beads/test/levels.py renders/<latest>/*.wav   # record peak/RMS/clipped per render; exit 1 = clipping
 python3 beads/test/measure.py --check           # renders, measures, runs beads/test/checks.py; exit 1 = a check failed
 ```
-`measure.py --check` is expected to fail until ticket 04 or 05 fixes the wet/dry level. Stock baseline
+`measure.py --check` has passed since ticket 05, so a failure is real. Stock baseline
 metrics (levels, clicks, attacks, wet − dry) are in `renders/stock/metrics.txt`; compare with
 `python3 beads/test/measure.py renders/<latest>/*.wav`.
 Record: harness built (yes/no), firmware end address and headroom, levels of the latest renders

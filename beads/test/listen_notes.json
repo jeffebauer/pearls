@@ -50,6 +50,30 @@
       "label": "06 sweep · Knee at −12 dBFS",
       "description": "Touches about 1.6% of samples in the hot render. The most audible softening of the four."
     },
+    "renders/07-min-attack": {
+      "label": "07 · Minimum attack 3 ms",
+      "description": "Grain attack floor raised from 0.5 ms to 3 ms. Includes 04, 05 and 06."
+    },
+    "renders/07-min-attack/sweep/a0p5": {
+      "label": "07 sweep · 0.5 ms floor (before)",
+      "description": "Ticket 06's code, unchanged. Granular player render: 412 clicks."
+    },
+    "renders/07-min-attack/sweep/a1": {
+      "label": "07 sweep · 1 ms floor",
+      "description": "Minimum grain attack doubled. Granular player render: 393 clicks, about level with stock's 395."
+    },
+    "renders/07-min-attack/sweep/a2": {
+      "label": "07 sweep · 2 ms floor",
+      "description": "Granular player render: 389 clicks."
+    },
+    "renders/07-min-attack/sweep/a3": {
+      "label": "07 sweep · 3 ms floor (chosen)",
+      "description": "Granular player render: 359 clicks, 9% under stock."
+    },
+    "renders/07-min-attack/sweep/a5": {
+      "label": "07 sweep · 5 ms floor",
+      "description": "The softest tested. Granular player render: 325 clicks, 18% under stock. Listen for transients losing their edge."
+    },
     "renders/check": {
       "label": "Latest check run",
       "description": "Whatever the working tree rendered on the last `measure.py --check`. Not a fixed version."

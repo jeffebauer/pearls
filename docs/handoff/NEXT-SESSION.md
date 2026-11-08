@@ -9,7 +9,7 @@ On `master` at `75cd424`, with this handoff as a checkpoint commit on top. Origi
 **Ticket 07**, `.scratch/soft-character/issues/07-minimum-grain-attack.md` (`CLAUDE.md` row 4): raise `min_attack_`, set at `beads/dsp/grain_envelope.h:64` (`0.0005f * sample_rate`). It's the likeliest fix for the clicks that rose with ticket 05, and it's desktop-only, so the missing backup doesn't block it.
 
 - Sweep at least 0.5, 1, 2, 3 and 5 ms, and score each with the click detector and attack-time metric. Table the results in the ticket's Comments.
-- Click baseline to beat, at `a081d46`: granular player 412, granular processor 321, processor 136, wet 97. Stock: 395, 276, 132, 98. In `renders/06-wet-saturator/metrics.txt`.
+- Click baseline to beat, at `a081d46`: granular player 412, granular processor 321, processor 136, wet 97. Stock: 395, 276, 135, 98. In `renders/06-wet-saturator/metrics.txt`.
 - Sweep method that worked for ticket 06: copy the source file to the scratchpad, `sed` the constant, build, render one test per process, move the WAVs out, then restore the file and rebuild. Run it under `bash`, since zsh doesn't word-split.
 - Render into `renders/07-<name>/`, add every new folder to `beads/test/listen_notes.json`, and give Jesse a preloaded listening link. Jesse picks the value by ear.
 
