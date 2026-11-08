@@ -1050,6 +1050,30 @@ void TestProcessorCloud() {
   p.time.attenuverter = 0.25f;
   p.shape.base = 0.66f;
   RenderProcessorPath("beads_cloud.wav", 1.0f, NULL, 0.9f, 30, 1.0f, p);
+  // Source 6 dB up, so the blended bus gain drives the wet saturator (ticket 16).
+  RenderProcessorPath("beads_cloud_hot.wav", 1.0f, NULL, 0.9f, 30, 2.0f, p);
+}
+
+// The cloud's level across Density and across how far Time is randomised, 15 s
+// each, for tuning the bus gain's blend (ticket 16).
+void TestProcessorCloudLevel() {
+  Parameters p = FixedWetPatch();
+  p.time.attenuverter = 0.25f;
+  p.shape.base = 0.66f;
+  const float densities[] = { 0.6f, 0.7f, 0.8f, 0.9f, 1.0f };
+  char filename[64];
+  for (size_t i = 0; i < sizeof(densities) / sizeof(densities[0]); ++i) {
+    snprintf(filename, sizeof(filename), "beads_cloudlevel_d%03d.wav",
+             int(densities[i] * 100.0f + 0.5f));
+    RenderProcessorPath(filename, 1.0f, NULL, densities[i], 15, 1.0f, p);
+  }
+  const float spreads[] = { 0.0f, 0.01f, 0.02f, 0.05f, 0.1f, 0.5f };
+  for (size_t i = 0; i < sizeof(spreads) / sizeof(spreads[0]); ++i) {
+    p.time.attenuverter = spreads[i];
+    snprintf(filename, sizeof(filename), "beads_cloudlevel_t%03d.wav",
+             int(spreads[i] * 100.0f + 0.5f));
+    RenderProcessorPath(filename, 1.0f, NULL, 0.9f, 15, 1.0f, p);
+  }
 }
 
 void TestProcessorDelay() {
@@ -2360,6 +2384,7 @@ const NamedTest kTests[] = {
   { "TestProcessorWetDrive", &TestProcessorWetDrive },
   { "TestProcessorVoiceSteal", &TestProcessorVoiceSteal },
   { "TestProcessorCloud", &TestProcessorCloud },
+  { "TestProcessorCloudLevel", &TestProcessorCloudLevel },
   { "TestProcessorDelay", &TestProcessorDelay },
   { "TestProcessorDelayBW", &TestProcessorDelayBW },
   { "TestProcessorDelayTimeXFade", &TestProcessorDelayTimeXFade },

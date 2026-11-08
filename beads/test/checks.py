@@ -98,6 +98,21 @@ def player_clicks_back_to_stock(m):
         % (n, STOCK_PLAYER_CLICKS))
 
 
+def cloud_within_1db_of_dry(m):
+    # A patch with Time randomised, whose grains don't add up in phase.
+    cloud = m["beads_cloud.wav"]["gated_rms_dbfs"]
+    dry = m["beads_wetdry_dry.wav"]["gated_rms_dbfs"]
+    return abs(cloud - dry) <= 1.0, (
+        "cloud - dry gated rms %+.1f dB" % (cloud - dry))
+
+
+def cloud_hot_not_clipped(m):
+    clipped = m["beads_cloud_hot.wav"]["clipped"]
+    return clipped == 0, (
+        "%d samples clipped in the hot cloud, peak %.1f dBFS"
+        % (clipped, m["beads_cloud_hot.wav"]["peak_dbfs"]))
+
+
 CHECKS = [
     # Ticket 01 (fails on stock); ticket 04 should make it pass.
     Check("wet and dry within 1 dB at 12 o'clock",
@@ -120,4 +135,11 @@ CHECKS = [
     # Ticket 07 (fails before the change: 412 clicks).
     Check("granular player clicks no worse than stock",
           ["TestGranularPlayer"], player_clicks_back_to_stock),
+    # Ticket 16 (fails before the change: -4.0 dB).
+    Check("cloud with Time randomised within 1 dB of the dry",
+          ["TestProcessorCloud", "TestProcessorWetDry"],
+          cloud_within_1db_of_dry),
+    # Ticket 16 guard: the louder cloud mustn't clip with the source 6 dB up.
+    Check("cloud with the source 6 dB up doesn't clip",
+          ["TestProcessorCloud"], cloud_hot_not_clipped),
 ]
