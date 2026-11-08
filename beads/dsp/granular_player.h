@@ -44,6 +44,10 @@ const float kInstantCrossfadeTime = 0.005f;
 const float kSimpleSchedulerThreshold = 0.025f;
 const float kPreemptiveCrossfadeTime = 0.1f;
 
+// Wet bus normalisation (ticket 05, ADR 0004). The bus gain drops at once
+// when grains pile up and recovers with this time constant when they thin out.
+const float kBusGainRecoveryTime = 0.1f;
+
 struct Parameters {
   RandomizedParameter time;
   RandomizedParameter size;
@@ -72,6 +76,7 @@ class GranularPlayer {
     max_grain_duration_ = sample_rate * 4.0f;
     sample_rate_ = sample_rate;
     one_hertz_ = 1.0f / sample_rate;
+    bus_gain_recovery_ = 1.0f / (sample_rate * kBusGainRecoveryTime);
     Reset();
   }
   
@@ -80,6 +85,7 @@ class GranularPlayer {
       grain_[i].Init(sample_rate_);
       grain_priority_list_[i] = &grain_[i];
     }
+    bus_gain_ = 1.0f;
   }
   
   inline float ComputeSpread(
@@ -113,6 +119,18 @@ class GranularPlayer {
     return num_active_grains;
   }
   
+  // Pan spread stays count-based, as stock.
+  inline float ComputeGrainPan(
+      const TriggerGenerator::Output& trigger,
+      const Parameters& p,
+      float num_active_grains) {
+    const float total_spread = ComputeSpread(trigger, p);
+    const float pan_spread = 0.5f * num_active_grains * total_spread;
+    return BoundedRandomFloat(pan_spread);
+  }
+
+  // Stock per-grain gain, fixed at birth to 1/sqrt(active grains + 1). Only
+  // the wavetable player still uses it; the delay player normalises the bus.
   inline void ComputeGrainAmplitudeAndPan(
       const TriggerGenerator::Output& trigger,
       const Parameters& p,
@@ -120,10 +138,23 @@ class GranularPlayer {
       float* pan) {
     const float num_active_grains = float(CountActiveGrains() + 1);
     *amplitude = 1.0f / stmlib::Sqrt(num_active_grains);
+    *pan = ComputeGrainPan(trigger, p, num_active_grains);
+  }
 
-    const float total_spread = ComputeSpread(trigger, p);
-    const float pan_spread = 0.5f * num_active_grains * total_spread;
-    *pan = BoundedRandomFloat(pan_spread);
+  // Gain for the summed grains, from the sum of the envelope values of every
+  // live grain this sample: 1/max(sum, 1). Linear rather than square root:
+  // neighbouring grains read near-identical audio, so they add up nearly in
+  // phase (ADR 0004). The floor of 1 leaves a lone grain's fade untouched.
+  // The gain follows a rise in the sum at once, so a pile-up never
+  // overshoots, and recovers slowly when grains die away.
+  inline float UpdateBusGain(float envelope_sum) {
+    const float target = envelope_sum > 1.0f ? 1.0f / envelope_sum : 1.0f;
+    if (target < bus_gain_) {
+      bus_gain_ = target;
+    } else {
+      bus_gain_ += bus_gain_recovery_ * (target - bus_gain_);
+    }
+    return bus_gain_;
   }
   
   inline T* new_grain() { return grain_priority_list_[0]; }
@@ -214,6 +245,9 @@ class GranularPlayer {
   float one_hertz_;
   
   int grain_interval_;
+
+  float bus_gain_;
+  float bus_gain_recovery_;
   
   DISALLOW_COPY_AND_ASSIGN(GranularPlayer);
 };

@@ -134,9 +134,11 @@ class DelayGrain : public Grain {
       HeadCrossingPolicy head_crossing_policy,
       bool fade_out,
       typename DelayLineType>
-  inline void Render(const DelayLineType* delay_line, FloatFrame* in_out) {
+  inline float Render(const DelayLineType* delay_line, FloatFrame* in_out) {
+    // Returns the grain's envelope value this sample (0 when it's done), so
+    // the player can normalise the summed wet bus by the envelope sum.
     if (done()) {
-      return;
+      return 0.0f;
     }
     
     delay_ -= speed_;
@@ -212,7 +214,9 @@ class DelayGrain : public Grain {
       }
     }
     
-    sample *= envelope_.Render() * voice_stealing_envelope_.Render();
+    const float envelope = \
+        envelope_.Render() * voice_stealing_envelope_.Render();
+    sample *= envelope;
 
     in_out->l += sample.l * gain_[0][0] + sample.r * gain_[0][1];
     in_out->r += sample.l * gain_[1][0] + sample.r * gain_[1][1];
@@ -221,6 +225,7 @@ class DelayGrain : public Grain {
     if (done()) {
       remaining_samples_ = 0;
     }
+    return envelope;
   }
   
  private:

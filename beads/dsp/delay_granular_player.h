@@ -51,8 +51,10 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
       const float duration = p.size.value();
       const bool reverse = duration < 0.3333333f;
 
-      float amplitude, pan;
-      ComputeGrainAmplitudeAndPan(trigger, p, &amplitude, &pan);
+      // Grains start at full level; the bus gain below normalises the sum.
+      const float amplitude = 1.0f;
+      const float pan = ComputeGrainPan(
+          trigger, p, float(CountActiveGrains() + 1));
       
       const int safety = DelayGrain::head_crossing_safety_zone + 1;
       const int max_delay = delay_line->duration() - 2 * safety;
@@ -68,9 +70,16 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
       SortGrainList(p.monophonic_mode);
     }
 
+    FloatFrame wet;
+    wet.l = wet.r = 0.0f;
+    float envelope_sum = 0.0f;
     for (int i = 0; i < NUM_GRAINS; ++i) {
-      grain_[i].Render<HEAD_CROSSING_POLICY_STOP, true>(delay_line, out);
+      envelope_sum += grain_[i].Render<HEAD_CROSSING_POLICY_STOP, true>(
+          delay_line, &wet);
     }
+    const float gain = UpdateBusGain(envelope_sum);
+    out->l += wet.l * gain;
+    out->r += wet.r * gain;
 
     Tick();  // Required to estimate the timing between grains.
   }

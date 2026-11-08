@@ -28,7 +28,7 @@ Get a soft, smooth, Arbhar-like wet character without giving up live, always-on 
    Clip 09 from the Sublustris demos (picked D chords, CC0 Emily guitar) is the reference source for the harness, the Arbhar and the Multigrain. The synthetic `kettel.wav` stays as a regression check. Hardware captures get level and click metrics only.
 2. **Wet gain** is set from measurement, not fixed at 0.75: whatever value brings the check command's dense patch within 1 dB of the dry by gated RMS (about 0.94 on stock). It is re-checked after decision 3 lands, since normalisation changes the wet level. Changed 8 November 2026 after ticket 01 measured +4.1 dB, not 6.
 3. **Envelope-sum normalisation** replaces per-grain 1/√n at birth (ADR 0004):
-   - a bus gain g = 1/√(max(Σenv², 1)), falling fast and recovering slowly
+   - a bus gain g = 1/max(Σenv, 1), dropping at once and recovering slowly (linear, not √: amended 8 November 2026 after ticket 05's measurements)
    - pan spread stays count-based
    - CPU is measured on the debug pin before it lands
 4. **Soft saturator on the wet bus**, tanh-style, starting around −6 dBFS, placed after normalisation. The threshold is tuned from renders, and the stock limiter before the reverb stays.
