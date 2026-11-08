@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "listen",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["beads/test/listen.py"],
+      "port": 8765
+    }
+  ]
+}

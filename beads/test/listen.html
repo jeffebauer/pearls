@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Render Listening</title>
+<style>
+:root {
+  --bg: #f4f3ef;
+  --panel: #ffffff;
+  --ink: #1d1d1b;
+  --muted: #6d6b64;
+  --line: #dcd9d0;
+  --accent: #2f6f5e;
+  --accent-ink: #ffffff;
+  --wave: #9a978d;
+  --wave-active: #2f6f5e;
+  --loop: rgba(47, 111, 94, 0.12);
+  --warn: #a34a1d;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161614;
+    --panel: #1f1f1c;
+    --ink: #ecebe6;
+    --muted: #9b998f;
+    --line: #34332f;
+    --accent: #6cc3a6;
+    --accent-ink: #10201b;
+    --wave: #5b5a54;
+    --wave-active: #6cc3a6;
+    --loop: rgba(108, 195, 166, 0.14);
+    --warn: #f08a55;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+}
+main { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 18px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
+.sub { color: var(--muted); margin: 0 0 20px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+label { color: var(--muted); font-size: 12px; display: inline-flex; gap: 6px; align-items: center; }
+select, button, input[type=number] {
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 7px; padding: 6px 10px;
+}
+button { cursor: pointer; }
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); min-width: 84px; font-weight: 600; }
+.grow { flex: 1; }
+#wave { width: 100%; height: 120px; display: block; cursor: crosshair; border-radius: 6px; background: var(--bg); touch-action: none; }
+.time { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+.opts { display: grid; gap: 8px; }
+.opt {
+  display: grid; grid-template-columns: 34px 1fr auto auto auto; gap: 12px; align-items: center;
+  border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; cursor: pointer;
+  background: var(--panel); user-select: none;
+}
+.opt.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.key {
+  width: 30px; height: 30px; border-radius: 7px; display: grid; place-items: center;
+  font-weight: 700; background: var(--bg); border: 1px solid var(--line); font-family: var(--mono);
+}
+.opt.active .key { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.name { min-width: 0; }
+.name b { font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name small { color: var(--muted); font-family: var(--mono); font-size: 11px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meas { font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
+.meas .g { color: var(--ink); }
+.meas .warn { color: var(--warn); }
+.trim { display: flex; align-items: center; gap: 6px; }
+.trim input { width: 64px; padding: 4px 6px; font-family: var(--mono); font-size: 12px; }
+.x { border: none; background: none; color: var(--muted); font-size: 18px; padding: 2px 6px; }
+.blind .name small, .blind .meas, .blind .trim { visibility: hidden; }
+.empty { color: var(--muted); padding: 18px; text-align: center; }
+.reveal { margin-top: 10px; font-family: var(--mono); font-size: 12px; white-space: pre-wrap; }
+@media (max-width: 640px) {
+  .opt { grid-template-columns: 30px 1fr auto; }
+  .opt .trim, .opt .x { display: none; }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Render listening</h1>
+  <p class="sub">All options play in sync. Switching only changes which one you hear, so the playhead never moves.</p>
+
+  <section class="panel">
+    <div class="bar">
+      <label>Compare
+        <select id="preset"><option value="">Choose a render…</option></select>
+      </label>
+      <label>Add
+        <select id="add"><option value="">Any file…</option></select>
+      </label>
+      <span class="grow"></span>
+      <button id="clear">Clear</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="bar" style="margin-bottom:10px">
+      <button id="play" class="primary">Play</button>
+      <span class="time" id="time">0:00.0 / 0:00.0</span>
+      <span class="grow"></span>
+      <label>Level match
+        <select id="match">
+          <option value="lufs">Loudness (LUFS)</option>
+          <option value="gated">Gated RMS (measure.py)</option>
+          <option value="rms">RMS</option>
+          <option value="peak">Peak</option>
+          <option value="off">Off</option>
+        </select>
+      </label>
+      <label>Crossfade
+        <select id="fade">
+          <option value="0.005">5 ms</option>
+          <option value="0.01" selected>10 ms</option>
+          <option value="0.03">30 ms</option>
+        </select>
+      </label>
+      <label>Volume
+        <input id="vol" type="range" min="-30" max="0" step="0.5" value="-6">
+      </label>
+      <label><input id="blind" type="checkbox"> Blind</label>
+    </div>
+    <canvas id="wave"></canvas>
+    <div class="hint">Click to seek. Drag to set a loop, double-click to clear it. Keys: 1–9 pick, ←/→ cycle, space play/pause, 0 back to start (or loop start), B blind.</div>
+  </section>
+
+  <section class="panel">
+    <div class="opts" id="opts"><div class="empty">Choose a render above to compare every version of it.</div></div>
+    <div class="reveal" id="reveal"></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const db = (x) => (x > 0 ? 20 * Math.log10(x) : -Infinity);
+const undb = (d) => Math.pow(10, d / 20);
+const fmtDb = (d) => (isFinite(d) ? (d >= 0 ? "+" : "") + d.toFixed(1) : "–∞");
+const fmtT = (t) => { const m = Math.floor(t / 60); const s = t - m * 60; return m + ":" + (s < 10 ? "0" : "") + s.toFixed(1); };
+
+let ctx = null;
+const master = { node: null };
+let files = [];
+let options = [];          // {path, label, group, buffer, levels, trim, gainNode, source}
+let active = 0;
+let playing = false;
+let startCtxTime = 0, startOffset = 0, pausedAt = 0;
+let loop = null;           // {a, b} seconds
+let blindMap = null;       // shuffled indices: display slot -> option index
+
+function ensureCtx() {
+  if (!ctx) {
+    ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" });
+    master.node = ctx.createGain();
+    master.node.gain.value = undb(+$("vol").value);
+    master.node.connect(ctx.destination);
+  }
+  return ctx;
+}
+
+// ---------- Level measurement ----------
+
+function measureBasic(buf) {
+  const ch = [];
+  for (let c = 0; c < buf.numberOfChannels; c++) ch.push(buf.getChannelData(c));
+  const n = buf.length;
+  let peak = 0, sum = 0;
+  for (const d of ch) for (let i = 0; i < n; i++) { const v = Math.abs(d[i]); if (v > peak) peak = v; sum += d[i] * d[i]; }
+  const rms = Math.sqrt(sum / (n * ch.length));
+  // Gated RMS as in beads/test/measure.py: 1 ms frames, RMS per frame is the
+  // max over channels, frames under -60 dBFS dropped.
+  const frame = Math.round(buf.sampleRate / 1000);
+  const floor = undb(-60);
+  let acc = 0, count = 0;
+  for (let f = 0; f + frame <= n; f += frame) {
+    let e = 0;
+    for (const d of ch) { let s = 0; for (let i = f; i < f + frame; i++) s += d[i] * d[i]; e = Math.max(e, Math.sqrt(s / frame)); }
+    if (e > floor) { acc += e * e; count++; }
+  }
+  const gated = count ? Math.sqrt(acc / count) : 0;
+  return { peak: db(peak), rms: db(rms), gated: db(gated) };
+}
+
+async function measureLufs(buf) {
+  // ITU-R BS.1770 integrated loudness: K-weighting (approximated with Web
+  // Audio's high shelf and high pass), 400 ms blocks at 75% overlap,
+  // absolute gate -70 LUFS, relative gate -10 LU.
+  const off = new OfflineAudioContext(buf.numberOfChannels, buf.length, buf.sampleRate);
+  const src = off.createBufferSource(); src.buffer = buf;
+  const shelf = off.createBiquadFilter(); shelf.type = "highshelf"; shelf.frequency.value = 1681.97; shelf.gain.value = 4.0;
+  const hp = off.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 38.13; hp.Q.value = 0.5;
+  src.connect(shelf).connect(hp).connect(off.destination);
+  src.start();
+  const out = await off.startRendering();
+  const ch = []; for (let c = 0; c < out.numberOfChannels; c++) ch.push(out.getChannelData(c));
+  const block = Math.round(0.4 * out.sampleRate), hop = Math.round(0.1 * out.sampleRate);
+  const z = [];
+  for (let s = 0; s + block <= out.length; s += hop) {
+    let sum = 0;
+    for (const d of ch) { let e = 0; for (let i = s; i < s + block; i++) e += d[i] * d[i]; sum += e / block; }
+    z.push(sum);
+  }
+  const L = (x) => -0.691 + 10 * Math.log10(x);
+  const abs = z.filter((x) => L(x) > -70);
+  if (!abs.length) return -Infinity;
+  const mean = (a) => a.reduce((p, q) => p + q, 0) / a.length;
+  const rel = L(mean(abs)) - 10;
+  const gated = abs.filter((x) => L(x) > rel);
+  return L(mean(gated.length ? gated : abs));
+}
+
+// ---------- Gain ----------
+
+function matchGainsDb() {
+  const mode = $("match").value;
+  if (mode === "off" || !options.length) return options.map(() => 0);
+  const lv = options.map((o) => (o.levels ? o.levels[mode] : NaN));
+  if (lv.some((x) => !isFinite(x))) return options.map(() => 0);
+  const target = Math.min(...lv);            // attenuate only: nothing gets pushed into clipping
+  return lv.map((x) => target - x);
+}
+
+function totalGainDb(i) { return matchGainsDb()[i] + options[i].trim; }
+
+function applyGains(immediate) {
+  if (!ctx) return;
+  const fade = immediate ? 0.002 : +$("fade").value;
+  const now = ctx.currentTime;
+  options.forEach((o, i) => {
+    if (!o.gainNode) return;
+    const target = i === active ? undb(totalGainDb(i)) : 0;
+    const g = o.gainNode.gain;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.linearRampToValueAtTime(target, now + fade);
+  });
+}
+
+// ---------- Transport ----------
+
+function duration() { return options.reduce((m, o) => Math.max(m, o.buffer ? o.buffer.duration : 0), 0); }
+
+function position() {
+  if (!playing) return pausedAt;
+  let t = ctx.currentTime - startCtxTime + startOffset;
+  if (loop && t >= loop.b) t = loop.a + ((t - loop.a) % (loop.b - loop.a));
+  const d = duration();
+  return d ? Math.min(t, d) : 0;
+}
+
+function stopSources() {
+  options.forEach((o) => {
+    if (o.source) { try { o.source.stop(); } catch (e) {} o.source.disconnect(); o.source = null; }
+    if (o.gainNode) { o.gainNode.disconnect(); o.gainNode = null; }
+  });
+}
+
+function startAt(offset) {
+  ensureCtx();
+  stopSources();
+  const ready = options.filter((o) => o.buffer);
+  if (!ready.length) return;
+  const when = ctx.currentTime + 0.03;
+  options.forEach((o, i) => {
+    if (!o.buffer) return;
+    const s = ctx.createBufferSource();
+    s.buffer = o.buffer;
+    if (loop) { s.loop = true; s.loopStart = loop.a; s.loopEnd = loop.b; }
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    g.gain.setValueAtTime(0, when);
+    g.gain.linearRampToValueAtTime(i === active ? undb(totalGainDb(i)) : 0, when + 0.005);
+    s.connect(g).connect(master.node);
+    s.start(when, Math.min(offset, o.buffer.duration - 0.001));
+    if (!loop) s.onended = () => { if (playing && o === options[active] && position() >= duration() - 0.05) pause(0); };
+    o.source = s; o.gainNode = g;
+  });
+  startCtxTime = when; startOffset = offset; playing = true;
+  $("play").textContent = "Pause";
+}
+
+function play() {
+  ensureCtx();
+  if (ctx.state === "suspended") ctx.resume();
+  let from = pausedAt;
+  if (loop && (from < loop.a || from >= loop.b)) from = loop.a;
+  if (from >= duration() - 0.01) from = 0;
+  startAt(from);
+}
+
+function pause(at) {
+  pausedAt = at !== undefined ? at : position();
+  playing = false;
+  stopSources();
+  $("play").textContent = "Play";
+}
+
+function seek(t) {
+  t = Math.max(0, Math.min(t, duration()));
+  if (playing) startAt(t); else pausedAt = t;
+}
+
+function select(i) {
+  if (i < 0 || i >= options.length) return;
+  active = i;
+  applyGains(false);
+  render();
+}
+
+// ---------- Loading ----------
+
+async function loadOption(o) {
+  ensureCtx();
+  const res = await fetch("/files/" + o.path.split("/").map(encodeURIComponent).join("/"));
+  const ab = await res.arrayBuffer();
+  o.buffer = await ctx.decodeAudioData(ab);
+  o.peaks = null;
+  o.levels = measureBasic(o.buffer);
+  render();
+  o.levels.lufs = await measureLufs(o.buffer);
+  render();
+  if (playing) startAt(position());  // bring the new option into sync
+}
+
+function labelFor(path) {
+  const f = files.find((w) => w.path === path);
+  const group = f ? f.group.replace(/^renders\//, "") : path;
+  return { group, name: f ? f.name : path.split("/").pop() };
+}
+
+function setOptions(paths) {
+  const wasPlaying = playing, at = position();
+  pause(at);
+  options = paths.map((p) => ({ path: p, ...labelFor(p), buffer: null, levels: null, trim: 0 }));
+  active = Math.min(active, Math.max(0, options.length - 1));
+  blindMap = null; $("blind").checked = false; $("reveal").textContent = "";
+  writeHash();
+  render();
+  Promise.all(options.map(loadOption)).then(() => { if (wasPlaying) play(); });
+}
+
+function writeHash() { history.replaceState(null, "", "#" + options.map((o) => o.path).join(",")); }
+
+function groupOrder(g) {
+  if (g === "renders/stock") return "0";
+  if (g.startsWith("renders/reference")) return "1" + g;
+  if (g === "renders/check") return "9";
+  return "5" + g;
+}
+
+async function loadFiles() {
+  files = await (await fetch("/api/renders")).json();
+  const names = [...new Set(files.filter((f) => f.group.startsWith("renders")).map((f) => f.name))].sort();
+  const pre = $("preset");
+  names.forEach((n) => {
+    const count = files.filter((f) => f.name === n && f.group.startsWith("renders")).length;
+    pre.add(new Option(n + "  (" + count + ")", n));
+  });
+  const add = $("add");
+  let lastGroup = null, og = null;
+  files.forEach((f) => {
+    if (f.group !== lastGroup) { og = document.createElement("optgroup"); og.label = f.group; add.appendChild(og); lastGroup = f.group; }
+    og.appendChild(new Option(f.name, f.path));
+  });
+}
+
+function presetPaths(name) {
+  return files
+    .filter((f) => f.name === name && f.group.startsWith("renders"))
+    .sort((a, b) => groupOrder(a.group).localeCompare(groupOrder(b.group)))
+    .map((f) => f.path);
+}
+
+// ---------- Rendering ----------
+
+function slotOrder() { return blindMap || options.map((_, i) => i); }
+
+function render() {
+  const box = $("opts");
+  document.body.classList.toggle("blind", !!blindMap);
+  if (!options.length) { box.innerHTML = '<div class="empty">Choose a render above to compare every version of it.</div>'; drawWave(); return; }
+  const gains = matchGainsDb();
+  box.innerHTML = "";
+  slotOrder().forEach((i, slot) => {
+    const o = options[i];
+    const row = document.createElement("div");
+    row.className = "opt" + (i === active ? " active" : "");
+    const mode = $("match").value;
+    const lvl = o.levels ? o.levels[mode === "off" ? "lufs" : mode] : undefined;
+    const unit = (mode === "lufs" || mode === "off") ? " LUFS" : " dBFS";
+    const peakAfter = o.levels ? o.levels.peak + gains[i] + o.trim : -Infinity;
+    const title = blindMap ? "Option " + String.fromCharCode(65 + slot) : o.group;
+    row.innerHTML =
+      '<div class="key">' + (slot + 1) + "</div>" +
+      '<div class="name"><b></b><small></small></div>' +
+      '<div class="meas">' + (o.levels ? (lvl === undefined ? "measuring…" : fmtDb(lvl) + unit) + '<br><span class="g">gain ' + fmtDb(gains[i] + o.trim) + " dB</span>" +
+        (peakAfter > -0.1 ? ' <span class="warn">peak ' + fmtDb(peakAfter) + "</span>" : "") : "loading…") + "</div>" +
+      '<div class="trim"><label>trim</label><input type="number" step="0.5" min="-24" max="12" value="' + o.trim + '"></div>' +
+      '<button class="x" title="Remove">×</button>';
+    row.querySelector("b").textContent = title;
+    row.querySelector("small").textContent = o.path;
+    row.addEventListener("click", (e) => { if (!e.target.closest("input,button")) select(i); });
+    const inp = row.querySelector("input");
+    inp.addEventListener("click", (e) => e.stopPropagation());
+    inp.addEventListener("change", () => { o.trim = +inp.value || 0; applyGains(true); render(); });
+    row.querySelector(".x").addEventListener("click", () => { setOptions(options.filter((p) => p !== o).map((p) => p.path)); });
+    box.appendChild(row);
+  });
+  drawWave();
+}
+
+function peaksFor(o, width) {
+  if (o.peaks && o.peaks.width === width) return o.peaks;
+  const b = o.buffer, n = b.length, chs = [];
+  for (let c = 0; c < b.numberOfChannels; c++) chs.push(b.getChannelData(c));
+  const mins = new Float32Array(width), maxs = new Float32Array(width);
+  const step = n / width;
+  for (let x = 0; x < width; x++) {
+    let lo = 0, hi = 0;
+    const s = Math.floor(x * step), e = Math.min(n, Math.floor((x + 1) * step));
+    for (const d of chs) for (let i = s; i < e; i += 4) { const v = d[i]; if (v < lo) lo = v; if (v > hi) hi = v; }
+    mins[x] = lo; maxs[x] = hi;
+  }
+  o.peaks = { width, mins, maxs };
+  return o.peaks;
+}
+
+function drawWave() {
+  const cv = $("wave"), dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const g = cv.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  const css = getComputedStyle(document.documentElement);
+  const d = duration();
+  const o = options[active];
+  if (loop && d) {
+    g.fillStyle = css.getPropertyValue("--loop");
+    g.fillRect((loop.a / d) * w, 0, ((loop.b - loop.a) / d) * w, h);
+  }
+  if (o && o.buffer && d) {
+    const pw = Math.max(1, Math.round((o.buffer.duration / d) * w));
+    const p = peaksFor(o, pw);
+    const scale = undb(totalGainDb(active));   // draw what you hear, level matched
+    g.fillStyle = css.getPropertyValue("--wave-active");
+    for (let x = 0; x < pw; x++) {
+      const y1 = h / 2 - p.maxs[x] * scale * (h / 2), y2 = h / 2 - p.mins[x] * scale * (h / 2);
+      g.fillRect(x, y1, 1, Math.max(1, y2 - y1));
+    }
+    const pos = position();
+    g.fillStyle = css.getPropertyValue("--ink");
+    g.fillRect(Math.round((pos / d) * w), 0, 1.5, h);
+    $("time").textContent = fmtT(pos) + " / " + fmtT(d) + (loop ? "   loop " + fmtT(loop.a) + "–" + fmtT(loop.b) : "");
+  }
+}
+
+function tick() { if (playing) drawWave(); requestAnimationFrame(tick); }
+
+// ---------- Events ----------
+
+$("play").addEventListener("click", () => (playing ? pause() : play()));
+$("preset").addEventListener("change", (e) => { if (e.target.value) setOptions(presetPaths(e.target.value)); });
+$("add").addEventListener("change", (e) => {
+  const p = e.target.value; e.target.value = "";
+  if (p && !options.some((o) => o.path === p)) setOptions([...options.map((o) => o.path), p]);
+});
+$("clear").addEventListener("click", () => { setOptions([]); $("preset").value = ""; });
+$("match").addEventListener("change", () => { applyGains(true); render(); });
+$("vol").addEventListener("input", (e) => { if (master.node) master.node.gain.setTargetAtTime(undb(+e.target.value), ctx.currentTime, 0.01); });
+$("blind").addEventListener("change", (e) => {
+  if (e.target.checked) {
+    const idx = options.map((_, i) => i);
+    for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+    blindMap = idx;
+    active = blindMap[0];
+    applyGains(false);
+    $("reveal").textContent = "";
+  } else if (blindMap) {
+    $("reveal").textContent = blindMap.map((i, s) => "Option " + String.fromCharCode(65 + s) + " was " + options[i].path).join("\n");
+    blindMap = null;
+  }
+  render();
+});
+
+(() => {
+  const cv = $("wave");
+  let down = null;
+  const tAt = (e) => { const r = cv.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * duration(); };
+  cv.addEventListener("pointerdown", (e) => { if (!duration()) return; cv.setPointerCapture(e.pointerId); down = { t: tAt(e), x: e.clientX, drag: false }; });
+  cv.addEventListener("pointermove", (e) => {
+    if (!down) return;
+    if (Math.abs(e.clientX - down.x) > 4) down.drag = true;
+    if (down.drag) { const t = tAt(e); loop = { a: Math.min(down.t, t), b: Math.max(down.t, t) }; drawWave(); }
+  });
+  cv.addEventListener("pointerup", (e) => {
+    if (!down) return;
+    if (down.drag && loop && loop.b - loop.a > 0.05) { seek(loop.a); }
+    else if (!down.drag) { if (loop && (down.t < loop.a || down.t > loop.b)) loop = null; seek(down.t); }
+    else loop = null;
+    down = null; drawWave();
+  });
+  cv.addEventListener("dblclick", () => { loop = null; if (playing) startAt(position()); drawWave(); });
+})();
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.matches("input[type=number], select")) return;
+  const slots = slotOrder();
+  if (e.key >= "1" && e.key <= "9") { const s = +e.key - 1; if (s < slots.length) select(slots[s]); e.preventDefault(); }
+  else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+    if (!slots.length) return;
+    const cur = slots.indexOf(active), dir = e.key === "ArrowRight" ? 1 : -1;
+    select(slots[(cur + dir + slots.length) % slots.length]); e.preventDefault();
+  }
+  else if (e.key === " ") { playing ? pause() : play(); e.preventDefault(); }
+  else if (e.key === "0") { seek(loop ? loop.a : 0); }
+  else if (e.key === "b" || e.key === "B") { $("blind").click(); }
+});
+
+window.addEventListener("resize", drawWave);
+window.addEventListener("hashchange", () => {
+  const paths = decodeURIComponent(location.hash.slice(1)).split(",").filter(Boolean);
+  if (paths.join(",") !== options.map((o) => o.path).join(",")) setOptions(paths);
+});
+
+loadFiles().then(() => {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (h) setOptions(h.split(",").filter(Boolean));
+  else drawWave();
+  tick();
+});
+</script>
+</body>
+</html>
