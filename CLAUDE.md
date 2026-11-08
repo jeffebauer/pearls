@@ -29,7 +29,7 @@ Settled by grilling on 8 November 2026. The spec and one ticket per row are in `
 | --- | --- | --- |
 | 0 | Measurement setup: a render tool (wet vs dry level, click detector on 1 ms frames, grain attack time), guitar clip 09 as the reference source, reference patches, and Arbhar and Multigrain reference captures | `beads/test/`, `docs/reference-patches.md`, `renders/reference/` |
 | 1 | Done in `d4381c0`: wet gain from 1.5 to a measured 0.94, so a dense cloud at 12 o'clock is within 1 dB of the dry | `beads/dsp/processor.cc`, dry/wet balance |
-| 2 | Done in `bcf5e36` (CPU on the debug pin still to measure): envelope-sum wet normalisation: bus gain 1/max(Σenv, 1), dropping at once and recovering slowly, replacing per-grain 1/√n at birth (ADR 0004, amended to linear) | `beads/dsp/granular_player.h` |
+| 2 | Done in `bcf5e36` (CPU on the debug pin still to measure): envelope-sum wet normalisation: bus gain 1/max(Σenv, 1), dropping at once and recovering slowly, replacing per-grain 1/√n at birth (ADR 0004, amended to linear). `3d03f0d` blends the gain towards 1/√Σ when Time or Pitch is randomised, so a granular cloud matches the dry (ticket 16) | `beads/dsp/granular_player.h` |
 | 3 | Done in `a081d46`: soft saturator on the wet bus, linear to −6 dBFS then a tanh knee to 0 dBFS on the bus; the stock pre-reverb limiter stays | `beads/dsp/processor.cc` |
 | 4 | Done in `7a18a0f`: minimum grain attack from 0.5 ms to 3 ms, chosen from a render sweep | `beads/dsp/grain_envelope.h`, `min_attack_` |
 | 5 | Closed with no change: voice-stealing fade stays at 5 ms. A 5 to 20 ms sweep left click counts flat and was inaudible | `beads/dsp/granular_player.h`, `kInstantCrossfadeTime` |
