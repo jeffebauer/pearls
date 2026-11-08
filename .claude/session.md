@@ -50,7 +50,11 @@ No remote CI: these are the only gates. All fast (seconds).
 make -f beads/test/makefile 2>&1 | grep -E "(error|warning):" ; test -x beads_test && echo "harness ok"
 ./firmware.sh 2>&1 | tail -1                    # record "Flash image ends at 0x…, N KB below the settings sector"
 python3 beads/test/levels.py renders/<latest>/*.wav   # record peak/RMS/clipped per render; exit 1 = clipping
+python3 beads/test/measure.py --check           # renders, measures, runs beads/test/checks.py; exit 1 = a check failed
 ```
+`measure.py --check` is expected to fail until ticket 04 or 05 fixes the wet/dry level. Stock baseline
+metrics (levels, clicks, attacks, wet − dry) are in `renders/stock/metrics.txt`; compare with
+`python3 beads/test/measure.py renders/<latest>/*.wav`.
 Record: harness built (yes/no), firmware end address and headroom, levels of the latest renders
 against `renders/stock/`, and the sha. For DSP changes, the A/B listening verdict is Jesse's. Record
 it, or record that it's pending.

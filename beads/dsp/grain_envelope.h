@@ -35,6 +35,18 @@
 
 namespace beads {
 
+#ifdef TEST
+// Desktop harness only: lets beads_test.cc log every grain's envelope so the
+// measurement tool can report attack times. Compiled out of the firmware.
+class GrainEnvelopeProbe {
+ public:
+  virtual ~GrainEnvelopeProbe() { }
+  virtual void OnStart(const void* envelope) = 0;
+  virtual void OnRender(const void* envelope, float value) = 0;
+};
+extern GrainEnvelopeProbe* grain_envelope_probe;
+#endif  // TEST
+
 class GrainEnvelope {
  public:
   GrainEnvelope() { }
@@ -56,6 +68,9 @@ class GrainEnvelope {
   inline void Start(float duration, float shape) {
     stage_ = STAGE_ATTACK;
     phase_ = 0.0f;
+#ifdef TEST
+    if (grain_envelope_probe) grain_envelope_probe->OnStart(this);
+#endif  // TEST
     
     const float sustain = std::max(1.0f - 3.0f * shape, 0.0f);
     shape = (shape - 0.33333333f) * 1.5f;
@@ -124,6 +139,9 @@ class GrainEnvelope {
 
     phase_ += phase_increment_[stage_];
     WrapPhase();
+#ifdef TEST
+    if (grain_envelope_probe) grain_envelope_probe->OnRender(this, value);
+#endif  // TEST
     
     return value;
   }

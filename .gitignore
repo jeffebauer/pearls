@@ -49,3 +49,4 @@ beads_test
 renders/
 audio_samples/
 backups/
+/beads_*.wav

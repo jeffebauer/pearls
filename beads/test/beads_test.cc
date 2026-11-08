@@ -28,7 +28,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <map>
 #include <string>
+#include <vector>
 
 #include "stmlib/dsp/polyblep.h"
 #include "stmlib/test/wav_writer.h"
@@ -110,6 +112,77 @@ uint8_t block_2[256 * 1024];
 uint8_t* buffers[3];
 
 uint16_t reverb_buffer[32768];
+
+namespace beads {
+GrainEnvelopeProbe* grain_envelope_probe = NULL;
+}  // namespace beads
+
+// Logs the 10-90% rise time of every grain envelope that reaches 0.9, one CSV
+// row per grain. Read by beads/test/measure.py.
+class AttackLogger : public GrainEnvelopeProbe {
+ public:
+  AttackLogger(const char* filename) : sample_(0) {
+    fp_ = fopen(filename, "w");
+    fprintf(fp_, "start_sample,rise_10_90_ms\n");
+  }
+
+  ~AttackLogger() {
+    for (map<const void*, Record>::iterator it = records_.begin();
+         it != records_.end(); ++it) {
+      Flush(&it->second);
+    }
+    fclose(fp_);
+  }
+
+  void Tick() { ++sample_; }
+
+  virtual void OnStart(const void* envelope) {
+    Record* r = &records_[envelope];
+    Flush(r);
+    r->active = true;
+    r->start = sample_;
+    r->values.clear();
+  }
+
+  virtual void OnRender(const void* envelope, float value) {
+    Record* r = &records_[envelope];
+    if (r->active) {
+      r->values.push_back(value);
+    }
+  }
+
+ private:
+  struct Record {
+    Record() : active(false), start(0) { }
+    bool active;
+    size_t start;
+    vector<float> values;
+  };
+
+  // Fractional index at which the envelope first reaches the threshold.
+  static float Crossing(const vector<float>& v, float threshold) {
+    for (size_t i = 0; i < v.size(); ++i) {
+      if (v[i] >= threshold) {
+        if (i == 0) return 0.0f;
+        return float(i - 1) + (threshold - v[i - 1]) / (v[i] - v[i - 1]);
+      }
+    }
+    return -1.0f;
+  }
+
+  void Flush(Record* r) {
+    if (!r->active) return;
+    r->active = false;
+    const float t10 = Crossing(r->values, 0.1f);
+    const float t90 = Crossing(r->values, 0.9f);
+    if (t10 < 0.0f || t90 < 0.0f) return;  // Cut short before the attack ended.
+    fprintf(fp_, "%zu,%.4f\n", r->start, (t90 - t10) * 1000.0f / kSampleRate);
+  }
+
+  FILE* fp_;
+  size_t sample_;
+  map<const void*, Record> records_;
+};
 
 void TestDelayLine() {
   WavWriter wav_writer(14, kSampleRate, 30);
@@ -845,6 +918,79 @@ void TestProcessor() {
         in, frames, kBlockSize);
     wav_writer.Write(&(frames[0].l), kBlockSize * 2);
   }
+}
+
+// One pass of TestProcessor's patch with reverb and feedback off and Density
+// raised to 0.9, a dense random cloud (about 25 grains a second). The wet
+// level depends on density, and a sparse patch measures mostly the gaps
+// between grains. dry_wet 0 gives the dry path alone and 1 the wet path alone.
+// Both mix curves scale by the same factor at 12 o'clock, so the wet/dry level
+// difference measured here is the one heard at 12 o'clock.
+void RenderProcessorPath(const char* filename, float dry_wet,
+                         AttackLogger* logger) {
+  WavWriter wav_writer(2, kSampleRate, 30);
+  wav_writer.Open(filename);
+  AudioSource audio_source("audio_samples/kettel.wav");
+
+  Processor proc;
+  proc.Init(buffers, reverb_buffer);
+  proc.Configure(Processor::MEDIA_DIGITAL, false);
+
+  Parameters p;
+  p.time.base = 0.1f;
+  p.time.attenuverter = 0.0f;
+  p.time.has_cv = false;
+  p.size.base = 0.75f;
+  p.size.attenuverter = 0.0f;
+  p.size.has_cv = false;
+  p.shape.base = 0.3f;
+  p.shape.attenuverter = 0.0f;
+  p.shape.has_cv = false;
+  p.pitch.base = 0.0f;
+  p.pitch.attenuverter = 0.0f;
+  p.pitch.has_cv = false;
+  p.monophonic_mode = false;
+
+  Processor::MixParameters m;
+  m.feedback = 0.0f;
+  m.dry_wet = dry_wet;
+  m.reverb_amount = 0.0f;
+  m.output_gate = false;
+
+  ModulatedParameter d;
+  d.base = 0.9f;
+  d.cv = 0.0f;
+
+  grain_envelope_probe = logger;
+  for (size_t i = 0; i < kSampleRate * 30; i += kBlockSize) {
+    FloatFrame in[kBlockSize];
+    bool freeze[kBlockSize];
+    FloatFrame frames[kBlockSize];
+
+    audio_source.Read(in, kBlockSize);
+
+    fill(&freeze[0], &freeze[kBlockSize], false);
+    proc.Process(
+        SEED_BUTTON_STATE_LOCKED,
+        NULL,
+        freeze,
+        d, p, m,
+        in, frames, kBlockSize);
+    wav_writer.Write(&(frames[0].l), kBlockSize * 2);
+    // Rise times count rendered samples, so they're exact. Start times are
+    // only resolved to the block (12 samples), which is enough to find a grain.
+    if (logger) {
+      for (size_t j = 0; j < kBlockSize; ++j) logger->Tick();
+    }
+  }
+  grain_envelope_probe = NULL;
+}
+
+// Wet and dry paths rendered apart, plus a log of every grain's attack time.
+void TestProcessorWetDry() {
+  RenderProcessorPath("beads_wetdry_dry.wav", 0.0f, NULL);
+  AttackLogger logger("beads_wetdry_wet_attacks.csv");
+  RenderProcessorPath("beads_wetdry_wet.wav", 1.0f, &logger);
 }
 
 void TestProcessorDelay() {
@@ -2150,6 +2296,7 @@ const NamedTest kTests[] = {
   { "TestSubsampleTriggering", &TestSubsampleTriggering },
   { "TestGranularProcessor", &TestGranularProcessor },
   { "TestProcessor", &TestProcessor },
+  { "TestProcessorWetDry", &TestProcessorWetDry },
   { "TestProcessorDelay", &TestProcessorDelay },
   { "TestProcessorDelayBW", &TestProcessorDelayBW },
   { "TestProcessorDelayTimeXFade", &TestProcessorDelayTimeXFade },
