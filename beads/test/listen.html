@@ -137,7 +137,7 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
       <label><input id="blind" type="checkbox"> Blind</label>
     </div>
     <canvas id="wave"></canvas>
-    <div class="hint">Click to seek. Drag to set a loop, double-click to clear it. Keys: 1–9 pick, ←/→ cycle, space play/pause, 0 back to start (or loop start), B blind.</div>
+    <div class="hint">Click to seek. Loops the whole sample. Drag to set a shorter loop, double-click to clear it. Keys: 1–9 pick, ←/→ cycle, space play/pause, 0 back to start (or loop start), B blind.</div>
   </section>
 
   <section class="panel">
@@ -257,10 +257,21 @@ function applyGains(immediate) {
 
 function duration() { return options.reduce((m, o) => Math.max(m, o.buffer ? o.buffer.duration : 0), 0); }
 
+// The region playback repeats: the dragged loop, or else the whole sample. Null
+// when options differ in length, since looping each at its own end would
+// drift them apart; startAt restarts them together at the end instead.
+function loopRegion() {
+  if (loop) return loop;
+  const d = duration();
+  const sameLength = d > 0 && options.every((o) => !o.buffer || Math.abs(o.buffer.duration - d) < 0.001);
+  return sameLength ? { a: 0, b: d } : null;
+}
+
 function position() {
   if (!playing) return pausedAt;
   let t = ctx.currentTime - startCtxTime + startOffset;
-  if (loop && t >= loop.b) t = loop.a + ((t - loop.a) % (loop.b - loop.a));
+  const r = loopRegion();
+  if (r && t >= r.b) t = r.a + ((t - r.a) % (r.b - r.a));
   const d = duration();
   return d ? Math.min(t, d) : 0;
 }
@@ -278,18 +289,20 @@ function startAt(offset) {
   const ready = options.filter((o) => o.buffer);
   if (!ready.length) return;
   const when = ctx.currentTime + 0.03;
+  const region = loopRegion();
+  const longest = duration();
   options.forEach((o, i) => {
     if (!o.buffer) return;
     const s = ctx.createBufferSource();
     s.buffer = o.buffer;
-    if (loop) { s.loop = true; s.loopStart = loop.a; s.loopEnd = loop.b; }
+    if (region) { s.loop = true; s.loopStart = region.a; s.loopEnd = region.b; }
     const g = ctx.createGain();
     g.gain.value = 0;
     g.gain.setValueAtTime(0, when);
     g.gain.linearRampToValueAtTime(i === active ? undb(totalGainDb(i)) : 0, when + 0.005);
     s.connect(g).connect(master.node);
     s.start(when, Math.min(offset, o.buffer.duration - 0.001));
-    if (!loop) s.onended = () => { if (playing && o === options[active] && position() >= duration() - 0.05) pause(0); };
+    if (!region && o.buffer.duration >= longest - 0.001) s.onended = () => { if (playing && position() >= duration() - 0.05) startAt(0); };
     o.source = s; o.gainNode = g;
   });
   startCtxTime = when; startOffset = offset; playing = true;
