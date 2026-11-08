@@ -43,3 +43,17 @@ Seed + Freeze, Assign + Seed, Assign + Freeze, Assign + Quality (calibration), h
 
 - Australian English. Direct, explain trade-offs, recommend one option.
 - Senior designer and front-end developer, newer to embedded C++ and DSP: explain hardware and DSP specifics, skip general programming basics.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as local markdown files under `.scratch/<feature>/`, committed with the repo (the GitHub repo's Issues hold inherited upstream issues, so don't use them). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), recorded as a `Status:` line in each issue file. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root, created lazily. See `docs/agents/domain.md`.

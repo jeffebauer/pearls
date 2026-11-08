@@ -1,61 +1,57 @@
-# Next session: 8 November 2026 (setup done; Matt Pocock flow next)
+# Next session: after 8 November 2026 (skills set up, research done; grilling next)
 
 ## Where things stand
 
-On `master`. Repo set up: a clone of `pichenettes/eurorack` with submodules, `origin` =
-`jeffebauer/pearls` (public fork), `upstream` = Émilie's repo (pull only). Commits so far: the
-macOS harness fixes (`b1dee73`), the firmware build script and notes (`da78018`), and the session
-file plus render level check (`38bbcf8`). `origin/master` is at `da78018`. Whether `38bbcf8` and
-this handoff's commit were pushed depends on Jesse's answer at this wrap; `/session-start`'s
-ahead/behind line settles it. **No DSP changes yet. Nothing flashed. No settings backup exists.**
-The stock firmware builds with Arm GNU Toolchain 15.3 via `./firmware.sh` but has never run on the
-module.
+On `master`. Before this wrap's commit, `master` was level with `origin/master` at `526021e` (0 ahead, 0 behind), so `38bbcf8` and the first handoff are pushed. This wrap commits the Matt Pocock skills config and this handoff. Whether that commit is pushed depends on Jesse's answer at this wrap; `/session-start`'s ahead/behind line settles it. **No DSP changes yet. Nothing flashed. No settings backup exists.**
+
+This session:
+- **`/setup-matt-pocock-skills` done.** Tracker is local markdown under `.scratch/<feature>/`, committed with the repo. Triage uses the five default labels, recorded as a `Status:` line. Domain docs are single-context (`GLOSSARY.md` and `docs/adr/` at the root, created lazily). The config is in `docs/agents/*.md`, plus an `## Agent skills` section at the end of `CLAUDE.md`. **Correction to the last handoff:** GitHub Issues are *on* for `jeffebauer/pearls` and hold about 70 issues inherited from upstream. That's why local markdown was chosen.
+- **Both `/research` runs done, by hand** (the script can't run; see memory `research-script-broken`). The notes are in a new Obsidian vault at `~/Documents/Obsidian/Pearls` (outside git), under `Research/Web/`:
+  - `2026-11-08 — arbhar-grain-envelopes-and-soft-sound.md`
+  - `2026-11-08 — envelope-sum-normalisation-and-clouds-diffuser-at-48khz.md`
+- **Not done:** `/grill-with-docs`, `/to-spec`, `/to-tickets`, the two ADRs. The last handoff wanted these in one unbroken session, so they start fresh next time.
 
 ## Start here
 
-Run `/setup-matt-pocock-skills` in this fresh session, then `/grill-with-docs` on the brief
-(https://claude.ai/artifact/Nzy7HQb927z7DKiCY4a2Gs), then `/to-spec` and `/to-tickets`, all in
-**one unbroken session**: the grilling, spec and tickets build on the same thinking. Recommended
-answers for setup: local markdown tracker (GitHub turns issues off on forks, and Jesse is the only
-filer), default triage labels, single-context glossary at the repo root. Kick off two `/research`
-runs in the background before grilling: (a) what's documented about Arbhar's grain envelopes and
-soft character; (b) envelope-sum wet normalisation, and scaling Clouds' diffuser from 32 to 48 kHz.
-Record two decisions as ADRs during grilling: the GCC 15 / `-std=gnu++11` build, and never writing
-sector 15. Make the first ticket an objective render-measurement tool (wet vs dry level, a 1 ms-frame
-click detector, grain attack time), so `/tdd` has test points to work against. Then one fresh session
-per ticket with `/implement`, and `/retro` after the first.
+Run `/grill-with-docs` on the brief (https://claude.ai/artifact/Nzy7HQb927z7DKiCY4a2Gs), then `/to-spec` and `/to-tickets`, all in **one unbroken session**. Read the two research notes first. They change the plan:
+
+- **Arbhar's soft sound is several things stacked, not just the window.** The documented ingredients are:
+  - a Gaussian window at the centre of its Grain Window knob;
+  - long default grains (750 ms);
+  - **random per-grain amplitude and asynchronous timing by default**;
+  - a perceptual summing algorithm with saturation;
+  - coin-toss stereo.
+
+  Candidate changes that aren't in the CLAUDE.md table yet: a Gaussian/Hann window at the soft end of Shape, random per-grain amplitude plus jittered spawn timing, and a wider pan spread. Grill on whether they join the table.
+- **Change 6 (normalisation) has prior art in this repo.** `clouds/dsp/granular_sample_player.h:146-163` normalises the summed bus with a slewed count, 1/√(n−1), window-shape compensation and one-pole smoothing. Beads fixes 1/√(n+1) per grain at birth (`beads/dsp/granular_player.h:122`). Proposed design: `g = 1/√(max(Σenv², 1))`, smoothed asymmetrically. The floor of 1 stops a lone grain's fade being undone.
+- **Change 5 (diffuser).** Scale the delays ×1.5: L 189/270/404/666, R 227/308/368/608. Keep `kap = 0.625`. Use `FxEngine<4096, FORMAT_32_BIT>` (16 KB). **Beads runs at 32 kHz in Vintage Digital mode** (`beads/dsp/processor.h:78`), so size the lines for 48 kHz and read at runtime offsets scaled by the sample rate.
+
+Record two ADRs during grilling: the GCC 15 / `-std=gnu++11` build, and never writing sector 15. Make the first ticket an objective render-measurement tool (wet vs dry level, a click detector on 1 ms frames, grain attack time), so `/tdd` has test points. Then run one fresh session per ticket with `/implement`, and `/retro` after the first.
 
 ## Waiting on Jesse
 
-- **Settings backup**: read sector 15 (0x081E0000, 128 KB) out of the module with
-  STM32CubeProgrammer into `backups/` (git-ignored), plus a copy off this machine. Blocks any flash.
-- **Tracker choice** at `/setup-matt-pocock-skills`: local markdown (recommended) or GitHub Issues.
-- **Optional**: block pushes to upstream with `git remote set-url --push upstream DISABLED`. Offered,
-  not done.
+- **Settings backup.** Read sector 15 (0x081E0000, 128 KB) out of the module with STM32CubeProgrammer into `backups/` (git-ignored), and keep a copy off this machine. This blocks any flash.
+- **Optional:** block pushes to upstream with `git remote set-url --push upstream DISABLED`. Offered, not done.
+- **Optional:** to make `/research` work as designed, install `uv` and add `PERPLEXITY_API_KEY` to `~/.config/obsidian-second-brain/.env`. The script's `VAULT_PATH` would also need pointing at the Pearls vault.
 
 ## In flight
 
-Nothing is half-built. The shared session skills are finished and committed in
-`~/Documents/Sites/session-skills` (local only, not on GitHub). The other four projects haven't moved
-over to them yet; that happens when each is next opened (see that repo's README).
+Nothing. The two web-fetch subagents from this session finished (both failed, blocked by the context-mode hook) and left no changes.
 
 ## Will bite
 
-- The firmware linker script allows the image to run over the settings sector. Only `./firmware.sh`'s
-  end-address check stops an oversized build. Keep using the script, never bare `make`.
+- The firmware linker script lets the image run over the settings sector. Only `./firmware.sh`'s end-address check stops an oversized build, so always use the script, never bare `make`.
 - If sector 15 is blank or corrupt, the firmware silently writes defaults over the calibration.
-- `beads/test/makefile` needs `-Wno-vla-cxx-extension` for Apple Clang (already committed). GCC 15
-  needs `-std=gnu++11` (in `firmware.sh`); without it, 196 `register` errors come from ST's HAL.
-- `audio_samples/kettel.wav` is synthetic (from `beads/test/make_test_source.py`), not Émilie's
-  original. `renders/` and `audio_samples/` are git-ignored, so a fresh clone must regenerate both,
-  and render `renders/stock/` from the upstream DSP before any DSP change.
-- `./firmware.sh wav` (audio bootloader update file) has never been tried.
-- Shell quirks (`ls` is eza, zsh `=word`, sudo needs the Terminal panel) are in memory.
+- `beads/test/makefile` needs `-Wno-vla-cxx-extension` for Apple Clang (already committed). GCC 15 needs `-std=gnu++11` (in `firmware.sh`). Without it, ST's HAL produces 196 `register` errors.
+- `audio_samples/kettel.wav` is synthetic, generated by `beads/test/make_test_source.py`. `renders/` and `audio_samples/` are git-ignored, so a fresh clone must regenerate both and render `renders/stock/` from upstream DSP.
+- `./firmware.sh wav` has never been tried.
+- `/research` can't run its script. web-fetch subagents can't fetch pages under the context-mode hook, so use `ctx_fetch_and_index` in the main session. ModWiggler returns 403. Details are in memory.
+- The research notes are inference where marked. Arbhar's actual window maths and summing algorithm are undocumented.
 
 ## Gates
 
-At `38bbcf8`:
-- harness: builds with no warnings
+At `526021e` (no code changed since):
+- harness: builds, 0 errors or warnings
 - firmware: image ends at 0x0805ABB0, 1557 KB below the settings sector
 - stock renders, 30 s each, 0 clipped samples:
   - `beads_processor`: peak −3.2 dBFS, RMS −29.3 dBFS
@@ -64,8 +60,9 @@ At `38bbcf8`:
 
 ## Where to look
 
-- `CLAUDE.md`: goals, workflow, planned-changes table
+- `CLAUDE.md`: goals, workflow, the planned-changes table, the Agent skills section
 - `.claude/session.md`: checks, hazards, gates
+- `docs/agents/`: tracker, triage label and domain-doc conventions
+- the Pearls vault research notes (above)
 - the brief: https://claude.ai/artifact/Nzy7HQb927z7DKiCY4a2Gs
-- `beads/test/beads_test.cc`: harness tests (`./beads_test list`)
-- `beads/dsp/processor.cc`: dry/wet mix, the target of change #1
+- `beads/dsp/processor.cc` (dry/wet, change 1), `beads/dsp/granular_player.h` (gain, change 6), `clouds/dsp/fx/diffuser.h` (change 5)
