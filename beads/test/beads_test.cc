@@ -1129,11 +1129,12 @@ void TestProcessorCloudLevel() {
   }
 }
 
-// The cloud patch at five positions of Shape (ticket 09), 30 s each.
+// The cloud patch across Shape, 30 s each: the five window positions (ticket
+// 09) and halfway up the diffuser (ticket 10).
 void TestProcessorShapeSweep() {
   Parameters p = FixedWetPatch();
   p.time.attenuverter = 0.25f;
-  const float positions[] = { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
+  const float positions[] = { 0.0f, 0.25f, 0.5f, 0.75f, 0.875f, 1.0f };
   char filename[64];
   for (size_t i = 0; i < sizeof(positions) / sizeof(positions[0]); ++i) {
     p.shape.base = positions[i];

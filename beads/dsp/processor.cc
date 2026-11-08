@@ -37,6 +37,21 @@ namespace beads {
 const float kDelayModeTransitionTime = 1.5f;  // seconds
 const float kDelayModeFadeTime = 0.75f;  // seconds
 
+// Shape position where the wet diffuser starts: Hann. It's fully in at fully
+// clockwise, the Gaussian. Follows the knob and CV, not per-grain randomness.
+const float kDiffuserStartShape = 0.75f;
+
+inline float DiffuserAmount(const RandomizedParameter& shape) {
+  float position = shape.base;
+  if (shape.has_cv && shape.attenuverter > 0.0f) {
+    position += shape.attenuverter * shape.cv;
+  }
+  float amount = (position - kDiffuserStartShape) /
+      (1.0f - kDiffuserStartShape);
+  CONSTRAIN(amount, 0.0f, 1.0f);
+  return amount;
+}
+
 // Wet bus soft saturator, levels on the bus before the wet gain. Below the
 // threshold the signal passes untouched; above it a tanh curve takes it
 // toward the ceiling, with slope 1 at the knee so there's no corner.
@@ -221,6 +236,11 @@ void Processor::Process(
       break;
   }
   
+  // Delay mode uses Shape for something else, so the diffuser stays out of it.
+  // The switch happens when the wet path is faded right down.
+  diffuser_.set_amount(delay_mode ? 0.0f : DiffuserAmount(parameters.shape));
+  diffuser_.Process(out, size);
+
   // Fade-out / Fade-in the dry signal when switching between granular and
   // Delay mode.
   const float wet_fade = SmoothStep(
