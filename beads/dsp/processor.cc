@@ -37,8 +37,25 @@ namespace beads {
 const float kDelayModeTransitionTime = 1.5f;  // seconds
 const float kDelayModeFadeTime = 0.75f;  // seconds
 
+// Wet bus soft saturator, levels on the bus before the wet gain. Below the
+// threshold the signal passes untouched; above it a tanh curve takes it
+// toward the ceiling, with slope 1 at the knee so there's no corner.
+const float kWetSaturatorThreshold = 0.5f;  // -6 dBFS
+const float kWetSaturatorCeiling = 1.0f;
+
 using namespace std;
 using namespace stmlib;
+
+inline float SoftSaturate(float x) {
+  const float a = fabsf(x);
+  if (a <= kWetSaturatorThreshold) {
+    return x;
+  }
+  const float range = kWetSaturatorCeiling - kWetSaturatorThreshold;
+  const float y = kWetSaturatorThreshold + range * SoftClip(
+      (a - kWetSaturatorThreshold) / range);
+  return x < 0.0f ? -y : y;
+}
 
 void Processor::Init(
     uint8_t* buffers[],
@@ -218,6 +235,8 @@ void Processor::Process(
   stmlib::ParameterInterpolator wet_modulation(&wet_, wet, size);
 
   for (size_t i = 0; i < size; ++i) {
+    out[i].l = SoftSaturate(out[i].l);
+    out[i].r = SoftSaturate(out[i].r);
     out[i] = dry_modulation.Next() * dry_signal[i] + \
         wet_modulation.Next() * out[i];
   }
