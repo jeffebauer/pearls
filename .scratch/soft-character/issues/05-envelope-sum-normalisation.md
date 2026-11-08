@@ -1,6 +1,6 @@
 # 05: Envelope sum normalisation
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 04
 Type: task
 Spec: `../spec.md`, Spec decision 3, ADR 0004
@@ -16,7 +16,7 @@ Replace the per-grain 1/√(n+1) at birth (`beads/dsp/granular_player.h:122`) wi
 - [x] A lone grain's fade is unchanged (the floor of 1)
 - [x] In the measurement tool, the RMS spread across a Density sweep is narrower than stock
 - [x] The check command's "wet and dry within 1 dB at 12 o'clock" assertion still passes; if not, re-tune the wet post-gain in the same way as ticket 04 and record the new value
-- [ ] Standard gates, plus Jesse's A/B verdict
+- [x] Standard gates, plus Jesse's A/B verdict
 
 ## Comments
 
@@ -63,4 +63,8 @@ Jesse chose q = 1. ADR 0004, spec decision 3 and `CLAUDE.md` row 2 are amended. 
 - Firmware: image ends at 0x0805AD60, 1556 KB below the settings sector (stock 0x0805ABB0).
 - Renders in `renders/05-envelope-sum/` (one test per process; the harness's random sequence depends on run order). No clipping. Clicks against stock: granular player 412 (395), granular processor 321 (276), processor 136 (132), wet 97 (98). Grains no longer start pre-attenuated, so their 0.5 ms attacks stand out more against the bed; ticket 07 (minimum attack) is aimed at those edges.
 - Still open: CPU on the debug pin (needs the settings backup and a flash), and Jesse's A/B verdict.
+
+### 8 November 2026: A/B verdict
+
+Jesse: "Sounds good" (stock `renders/04-wet-gain/beads_processor.wav` against `renders/05-envelope-sum/beads_processor.wav`, LUFS-matched). Only the CPU measurement is left, which needs the settings backup and a flash, so this is `ready-for-human`.
 
