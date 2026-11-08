@@ -74,6 +74,26 @@
       "label": "07 sweep · 5 ms floor",
       "description": "The softest tested. Granular player render: 325 clicks, 18% under stock. Listen for transients losing their edge."
     },
+    "renders/08-voice-stealing-fade": {
+      "label": "08 · Current code",
+      "description": "Includes 04 to 07. Ticket 08 kept the 5 ms fade, so the DSP is unchanged from 07."
+    },
+    "renders/08-voice-stealing-fade/sweep/f5": {
+      "label": "08 sweep · 5 ms fade (kept)",
+      "description": "Voice-stealing fade unchanged, bit-identical to ticket 07 on the shared renders."
+    },
+    "renders/08-voice-stealing-fade/sweep/f10": {
+      "label": "08 sweep · 10 ms fade",
+      "description": "Fade doubled. Click counts unchanged. The difference from 5 ms is about 40 dB below the signal on the wet render."
+    },
+    "renders/08-voice-stealing-fade/sweep/f15": {
+      "label": "08 sweep · 15 ms fade",
+      "description": "Click counts unchanged. The difference from 5 ms is about 36 dB below the signal on the wet render."
+    },
+    "renders/08-voice-stealing-fade/sweep/f20": {
+      "label": "08 sweep · 20 ms fade",
+      "description": "The longest the scheduler ordering allows here. Click counts unchanged. The difference from 5 ms is about 34 dB below the signal on the wet render."
+    },
     "renders/check": {
       "label": "Latest check run",
       "description": "Whatever the working tree rendered on the last `measure.py --check`. Not a fixed version."
@@ -85,10 +105,13 @@
     "beads_processor.wav": "The full module: Density 0.7, mix 0.9, a little reverb, 30 s. Closest to playing it.",
     "beads_granular_player.wav": "The grain engine alone, before mix and reverb.",
     "beads_granular_processor.wav": "The granular processor alone, before the dry/wet mix and reverb.",
-    "beads_wetdry_wet.wav": "Fully wet, dense random cloud (Density 0.9), no reverb or feedback.",
+    "beads_wetdry_wet.wav": "Fully wet, Density 0.9, no reverb or feedback. Nothing is randomised, so it sounds close to the source delayed by about 0.4 s. There's no dry in it. For grain character, use beads_cloud.wav.",
     "beads_wetdry_dry.wav": "Fully dry, same patch. What the wet is level-matched against.",
     "beads_drive_hot.wav": "Fully wet, dense cloud, source 6 dB hotter than normal. Drives peaks into the saturator; listen to transients and the loudest swells.",
     "beads_drive_quiet.wav": "Fully wet, dense cloud, source 12 dB down. Below the saturator; should sound identical across versions.",
+    "beads_steal_s090.wav": "Fully wet, Size 0.9, Density 0.9. About 38 grains want to overlap in a 32-grain pool, so voice stealing runs.",
+    "beads_steal_s098.wav": "Fully wet, Size 0.98, Density 0.9, the longest grains before delay mode. About 83 grains want to overlap in a 32-grain pool, so voice stealing runs hard.",
+    "beads_cloud.wav": "Fully wet, a properly granular cloud: Density 0.9, Size 0.75, Shape at the bell, Time spread over about a second per grain, Pitch fixed. No reverb or feedback.",
     "beads_density_000.wav": "Fully wet, Density 0.0 (regular, audio-rate end), 15 s.",
     "beads_density_010.wav": "Fully wet, Density 0.1 (regular), 15 s.",
     "beads_density_020.wav": "Fully wet, Density 0.2 (regular), 15 s.",
