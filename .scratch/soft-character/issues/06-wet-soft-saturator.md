@@ -1,6 +1,6 @@
 # 06: Wet soft saturator
 
-Status: ready-for-human
+Status: done
 Blocked by: 05
 Type: task
 Spec: `../spec.md`, Spec decision 4
@@ -13,7 +13,7 @@ Add a gentle tanh-style soft clip on the wet bus, after normalisation and before
 
 - [x] Threshold starts around −6 dBFS and is tuned from renders (−6 kept; sweep below)
 - [x] No change below the threshold (within 0.1 dB)
-- [ ] Standard gates (done), plus Jesse's A/B verdict (pending)
+- [x] Standard gates, plus Jesse's A/B verdict
 
 ## Comments
 
@@ -34,3 +34,5 @@ Threshold sweep (fully wet, Density 0.9). The share of samples over each thresho
 RMS, gated RMS and click counts move by 0.01 dB or less at every threshold. At −6 dBFS it's a safety net for overs, and it doesn't colour normal playing. Audible softening of dense clouds would need about −9 to −12. Kept −6 as the spec says; the listening set is in `renders/06-wet-saturator/sweep/` (`off`, `m06`, `m09`, `m12`), for Jesse to choose by ear.
 
 Gates: harness builds clean. Firmware image ends at 0x0805AF28, 1556 KB below the settings sector. `measure.py --check` passes 5 of 5. `levels.py renders/06-wet-saturator/*.wav` shows no clipping. Granular player, granular processor and dry renders are bit-identical to ticket 05's.
+
+**8 November 2026, verdict.** Jesse compared off, −6, −9 and −12 dBFS on the source +6 dB render and chose to keep −6 dBFS. No code change: `a081d46` already has it.

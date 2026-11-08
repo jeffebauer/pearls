@@ -39,7 +39,7 @@
       "description": "Ticket 05's code. Overs go straight to the stock limiter, and the hot render clips 7 samples."
     },
     "renders/06-wet-saturator/sweep/m06": {
-      "label": "06 sweep · Knee at −6 dBFS (committed)",
+      "label": "06 sweep · Knee at −6 dBFS (chosen)",
       "description": "Touches about 0.04% of samples in the hot render: a safety net for overs, no colour in normal playing."
     },
     "renders/06-wet-saturator/sweep/m09": {
