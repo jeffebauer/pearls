@@ -1,56 +1,56 @@
-# Next session: after 8 November 2026 (skills set up, research done; grilling next)
+# Next session: after 8 November 2026 (grilling done, spec and tickets written)
 
 ## Where things stand
 
-On `master`. Before this wrap's commit, `master` was level with `origin/master` at `526021e` (0 ahead, 0 behind), so `38bbcf8` and the first handoff are pushed. This wrap commits the Matt Pocock skills config and this handoff. Whether that commit is pushed depends on Jesse's answer at this wrap; `/session-start`'s ahead/behind line settles it. **No DSP changes yet. Nothing flashed. No settings backup exists.**
+On `master`. This session added three commits on top of `500be04`:
+- `ad1ed1c`: the plan write-up
+- `37b4619`: the check command added to tickets 01 and 04
+- this handoff
+
+Whether they're pushed depends on Jesse's answer at this wrap; `/session-start`'s ahead/behind line settles it. **No DSP changes yet. Nothing flashed. No settings backup exists.** All gates are green (see below).
 
 This session:
-- **`/setup-matt-pocock-skills` done.** Tracker is local markdown under `.scratch/<feature>/`, committed with the repo. Triage uses the five default labels, recorded as a `Status:` line. Domain docs are single-context (`GLOSSARY.md` and `docs/adr/` at the root, created lazily). The config is in `docs/agents/*.md`, plus an `## Agent skills` section at the end of `CLAUDE.md`. **Correction to the last handoff:** GitHub Issues are *on* for `jeffebauer/pearls` and hold about 70 issues inherited from upstream. That's why local markdown was chosen.
-- **Both `/research` runs done, by hand** (the script can't run; see memory `research-script-broken`). The notes are in a new Obsidian vault at `~/Documents/Obsidian/Pearls` (outside git), under `Research/Web/`:
-  - `2026-11-08 — arbhar-grain-envelopes-and-soft-sound.md`
-  - `2026-11-08 — envelope-sum-normalisation-and-clouds-diffuser-at-48khz.md`
-- **Not done:** `/grill-with-docs`, `/to-spec`, `/to-tickets`, the two ADRs. The last handoff wanted these in one unbroken session, so they start fresh next time.
+- **Grilling is finished.** `/grill-with-docs` ran on the brief. Every decision is recorded in:
+  - `.scratch/soft-character/spec.md`
+  - four ADRs in `docs/adr/` (GCC 15 build, settings sector, Shape sweep, envelope-sum normalisation)
+  - `GLOSSARY.md`
+  - the parked ideas in `.scratch/backlog/parked.md`
+  - the planned-changes table in `CLAUDE.md`, now 13 rows numbered 0–12
+- **15 tickets** are in `.scratch/soft-character/issues/01-…` to `15-…`. Each carries `Status:` and `Blocked by:` lines.
+  - The spec and tickets were written by hand, following the `/to-spec` and `/to-tickets` conventions. Those skills existed but weren't in this session's invocable list.
+  - **Jesse hasn't reviewed the ticket breakdown itself.** `/to-tickets` would normally quiz him on granularity before writing. He approved the plan, not the 15-way split.
+- **Ticket 01 now asks for one pass/fail check command.** Its first assertion (wet and dry within 1 dB at 12 o'clock) fails on stock, and ticket 04 makes it pass. This gives `/tdd` a failing check to start from.
+- **Workflow agreed** (via `/ask-matt`): `/implement` one ticket per fresh session, with `/clear` between. Not `/implement-spec`, because the chain is nearly linear and every DSP ticket waits on Jesse's A/B verdict. Run `/retro` after ticket 01, in that session.
 
 ## Start here
 
-Run `/grill-with-docs` on the brief (https://claude.ai/artifact/Nzy7HQb927z7DKiCY4a2Gs), then `/to-spec` and `/to-tickets`, all in **one unbroken session**. Read the two research notes first. They change the plan:
-
-- **Arbhar's soft sound is several things stacked, not just the window.** The documented ingredients are:
-  - a Gaussian window at the centre of its Grain Window knob;
-  - long default grains (750 ms);
-  - **random per-grain amplitude and asynchronous timing by default**;
-  - a perceptual summing algorithm with saturation;
-  - coin-toss stereo.
-
-  Candidate changes that aren't in the CLAUDE.md table yet: a Gaussian/Hann window at the soft end of Shape, random per-grain amplitude plus jittered spawn timing, and a wider pan spread. Grill on whether they join the table.
-- **Change 6 (normalisation) has prior art in this repo.** `clouds/dsp/granular_sample_player.h:146-163` normalises the summed bus with a slewed count, 1/√(n−1), window-shape compensation and one-pole smoothing. Beads fixes 1/√(n+1) per grain at birth (`beads/dsp/granular_player.h:122`). Proposed design: `g = 1/√(max(Σenv², 1))`, smoothed asymmetrically. The floor of 1 stops a lone grain's fade being undone.
-- **Change 5 (diffuser).** Scale the delays ×1.5: L 189/270/404/666, R 227/308/368/608. Keep `kap = 0.625`. Use `FxEngine<4096, FORMAT_32_BIT>` (16 KB). **Beads runs at 32 kHz in Vintage Digital mode** (`beads/dsp/processor.h:78`), so size the lines for 48 kHz and read at runtime offsets scaled by the sample rate.
-
-Record two ADRs during grilling: the GCC 15 / `-std=gnu++11` build, and never writing sector 15. Make the first ticket an objective render-measurement tool (wet vs dry level, a click detector on 1 ms frames, grain attack time), so `/tdd` has test points. Then run one fresh session per ticket with `/implement`, and `/retro` after the first.
+Run `/implement .scratch/soft-character/issues/01-render-measurement-tool.md`. Every later ticket's acceptance depends on its metrics and its check command, and it needs no hardware. Read `spec.md` decision 1 and ticket 01 first. Then run `/retro` in the same session before clearing. Optionally, glance at the ticket list with Jesse first, since he hasn't reviewed the breakdown (for example, 07 and 08 could merge).
 
 ## Waiting on Jesse
 
-- **Settings backup.** Read sector 15 (0x081E0000, 128 KB) out of the module with STM32CubeProgrammer into `backups/` (git-ignored), and keep a copy off this machine. This blocks any flash.
-- **Optional:** block pushes to upstream with `git remote set-url --push upstream DISABLED`. Offered, not done.
-- **Optional:** to make `/research` work as designed, install `uv` and add `PERPLEXITY_API_KEY` to `~/.config/obsidian-second-brain/.env`. The script's `VAULT_PATH` would also need pointing at the Pearls vault.
+- **Settings backup.** Read sector 15 (0x081E0000, 128 KB) with STM32CubeProgrammer into `backups/` (git-ignored), and copy it off this machine. This blocks any flash, and so the CPU measurements in tickets 05, 09 and 10.
+- **Ticket 03, the reference captures.** Play the reference source into the Arbhar and the Multigrain, using each reference patch. Possible once ticket 02 lands.
+- **A/B verdicts** on each DSP ticket (04 onwards), recorded in the ticket's Comments.
+- **Optional:** block pushes to upstream with `git remote set-url --push upstream DISABLED`. Offered twice, not done.
+- **Optional:** install `uv` and a Perplexity key for `/research` (see memory `research-script-broken`).
 
 ## In flight
 
-Nothing. The two web-fetch subagents from this session finished (both failed, blocked by the context-mode hook) and left no changes.
+Nothing. No delegates, branches or worktrees.
 
 ## Will bite
 
-- The firmware linker script lets the image run over the settings sector. Only `./firmware.sh`'s end-address check stops an oversized build, so always use the script, never bare `make`.
-- If sector 15 is blank or corrupt, the firmware silently writes defaults over the calibration.
-- `beads/test/makefile` needs `-Wno-vla-cxx-extension` for Apple Clang (already committed). GCC 15 needs `-std=gnu++11` (in `firmware.sh`). Without it, ST's HAL produces 196 `register` errors.
-- `audio_samples/kettel.wav` is synthetic, generated by `beads/test/make_test_source.py`. `renders/` and `audio_samples/` are git-ignored, so a fresh clone must regenerate both and render `renders/stock/` from upstream DSP.
-- `./firmware.sh wav` has never been tried.
-- `/research` can't run its script. web-fetch subagents can't fetch pages under the context-mode hook, so use `ctx_fetch_and_index` in the main session. ModWiggler returns 403. Details are in memory.
-- The research notes are inference where marked. Arbhar's actual window maths and summing algorithm are undocumented.
+- **The reference source is clip 09 of the Sublustris demos** (picked D chords, CC0 Emily guitar). It's built by `~/Documents/Sites/sublustris-versio/docs/minisite/tools/demos/build_sources.py` from `~/Documents/Sites/resilio-versio/test_audio/demo_sources/cc0/guitar_emily/`. That script writes 48 kHz float WAV, and the harness expects 16-bit, so convert. The `*-dry.mp3` in that repo is lossy, so don't use it.
+- **Stock Shape order** is square → decay → bell (about ⅔ of the travel) → reverse (`grain_envelope.h:59-79`). The new order puts decay before square (ADR 0003).
+- **`kInstantCrossfadeTime` is tied to the scheduler thresholds** (comment at `granular_player.h:41`). Ticket 08 must check that ordering still holds.
+- **Density** is periodic left of noon and random right of noon (`trigger_generator.cc:110, 132-137`). Pan spread is zero unless something is randomised (`granular_player.h:85-126`).
+- **Reading PDFs:** there's no pdftotext or pdftoppm. Use the PDFKit Swift route in memory `module-manuals`, which also lists Jesse's local manual paths. Multigrain v1.4 lists seven discrete shapes, with Tukey as the default.
+- The firmware linker script lets the image run over the settings sector, so always build with `./firmware.sh`, never bare `make` (ADR 0002).
+- `renders/` and `audio_samples/` are git-ignored, so a fresh clone must regenerate both.
 
 ## Gates
 
-At `526021e` (no code changed since):
+At `37b4619` (docs-only changes since `526021e`):
 - harness: builds, 0 errors or warnings
 - firmware: image ends at 0x0805ABB0, 1557 KB below the settings sector
 - stock renders, 30 s each, 0 clipped samples:
@@ -60,9 +60,8 @@ At `526021e` (no code changed since):
 
 ## Where to look
 
-- `CLAUDE.md`: goals, workflow, the planned-changes table, the Agent skills section
-- `.claude/session.md`: checks, hazards, gates
-- `docs/agents/`: tracker, triage label and domain-doc conventions
-- the Pearls vault research notes (above)
-- the brief: https://claude.ai/artifact/Nzy7HQb927z7DKiCY4a2Gs
-- `beads/dsp/processor.cc` (dry/wet, change 1), `beads/dsp/granular_player.h` (gain, change 6), `clouds/dsp/fx/diffuser.h` (change 5)
+- `.scratch/soft-character/spec.md`: the design, in 12 decisions
+- `.scratch/soft-character/issues/01-render-measurement-tool.md`: the next ticket
+- `CLAUDE.md`: the planned-changes table and workflow
+- `GLOSSARY.md` and `docs/adr/`: vocabulary and the decisions not to undo
+- `.claude/session.md`: gates and hazards
