@@ -8,6 +8,9 @@ Serves beads/test/listen.html, a JSON list of every WAV under renders/ and
 audio_samples/ at /api/renders, and the WAVs themselves under /files/. Only
 those two folders are served, and only on 127.0.0.1.
 
+Names and descriptions come from beads/test/listen_notes.json (committed,
+since renders/ is git-ignored), re-read on every request.
+
 Open a comparison directly with a hash of comma-separated paths, e.g.
     http://127.0.0.1:8765/#renders/stock/beads_processor.wav,renders/04-wet-gain/beads_processor.wav
 """
@@ -21,9 +24,21 @@ from urllib.parse import unquote, urlparse
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "listen.html")
 AUDIO_DIRS = ("renders", "audio_samples")
+NOTES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "listen_notes.json")
+
+
+def load_notes():
+    try:
+        with open(NOTES) as f:
+            notes = json.load(f)
+    except (OSError, ValueError) as e:
+        print("listen_notes.json not read: %s" % e, flush=True)
+        notes = {}
+    return notes.get("folders", {}), notes.get("renders", {})
 
 
 def list_wavs():
+    folders, renders = load_notes()
     out = []
     for top in AUDIO_DIRS:
         base = os.path.join(ROOT, top)
@@ -32,11 +47,16 @@ def list_wavs():
                 if f.lower().endswith(".wav"):
                     full = os.path.join(dirpath, f)
                     rel = os.path.relpath(full, ROOT)
+                    group = os.path.relpath(dirpath, ROOT)
+                    folder = folders.get(group, {})
                     out.append({
                         "path": rel,
-                        "group": os.path.relpath(dirpath, ROOT),
+                        "group": group,
                         "name": f,
                         "mtime": os.path.getmtime(full),
+                        "label": folder.get("label", ""),
+                        "description": folder.get("description", ""),
+                        "about": renders.get(f, ""),
                     })
     out.sort(key=lambda w: (w["group"], w["name"]))
     return out

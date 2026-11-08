@@ -1,0 +1,79 @@
+{
+  "_about": "Names and descriptions for the listening page (beads/test/listen.py). 'folders' says which version of the firmware a folder holds; 'renders' says what each harness render is. Keys are repo-relative folder paths and WAV file names. A folder without an entry shows its path.",
+
+  "folders": {
+    "audio_samples": {
+      "label": "Source",
+      "description": "The input fed to every render, unprocessed."
+    },
+    "renders/stock": {
+      "label": "Stock",
+      "description": "Upstream firmware, before any Soft Beads change. The reference."
+    },
+    "renders/04-wet-gain": {
+      "label": "04 · Wet gain 0.94",
+      "description": "Wet gain lowered from 1.5 to 0.94, so a dense cloud at 12 o'clock sits within 1 dB of the dry."
+    },
+    "renders/05-envelope-sum": {
+      "label": "05 · Envelope-sum normalisation",
+      "description": "The wet bus is scaled by 1/max(Σenv, 1) instead of 1/√n per grain at birth. Includes ticket 04."
+    },
+    "renders/05-envelope-sum/pre": {
+      "label": "05 sweep · Before (per-grain 1/√n)",
+      "description": "Stock normalisation, with ticket 04's gain. The baseline for the exponent sweep."
+    },
+    "renders/05-envelope-sum/q1": {
+      "label": "05 sweep · Linear, q = 1 (chosen)",
+      "description": "Bus scaled by 1/max(Σenv, 1). Flat level across Density 0.6–0.9; what shipped."
+    },
+    "renders/05-envelope-sum/q2": {
+      "label": "05 sweep · Square root, q = 2",
+      "description": "Bus scaled by 1/max(√Σenv², 1), as ADR 0004 first named. Gets louder as Density rises, and clips."
+    },
+    "renders/06-wet-saturator": {
+      "label": "06 · Wet saturator at −6 dBFS",
+      "description": "Wet bus untouched below −6 dBFS, then a tanh curve toward 0 dBFS. Includes 04 and 05."
+    },
+    "renders/06-wet-saturator/sweep/off": {
+      "label": "06 sweep · Saturator off",
+      "description": "Ticket 05's code. Overs go straight to the stock limiter, and the hot render clips 7 samples."
+    },
+    "renders/06-wet-saturator/sweep/m06": {
+      "label": "06 sweep · Knee at −6 dBFS (committed)",
+      "description": "Touches about 0.04% of samples in the hot render: a safety net for overs, no colour in normal playing."
+    },
+    "renders/06-wet-saturator/sweep/m09": {
+      "label": "06 sweep · Knee at −9 dBFS",
+      "description": "Touches about 0.3% of samples in the hot render. Peaks of dense clouds start to round off."
+    },
+    "renders/06-wet-saturator/sweep/m12": {
+      "label": "06 sweep · Knee at −12 dBFS",
+      "description": "Touches about 1.6% of samples in the hot render. The most audible softening of the four."
+    },
+    "renders/check": {
+      "label": "Latest check run",
+      "description": "Whatever the working tree rendered on the last `measure.py --check`. Not a fixed version."
+    }
+  },
+
+  "renders": {
+    "kettel.wav": "The test source: 48 kHz stereo, as fed to the harness.",
+    "beads_processor.wav": "The full module: Density 0.7, mix 0.9, a little reverb, 30 s. Closest to playing it.",
+    "beads_granular_player.wav": "The grain engine alone, before mix and reverb.",
+    "beads_granular_processor.wav": "The granular processor alone, before the dry/wet mix and reverb.",
+    "beads_wetdry_wet.wav": "Fully wet, dense random cloud (Density 0.9), no reverb or feedback.",
+    "beads_wetdry_dry.wav": "Fully dry, same patch. What the wet is level-matched against.",
+    "beads_drive_hot.wav": "Fully wet, dense cloud, source 6 dB hotter than normal. Drives peaks into the saturator; listen to transients and the loudest swells.",
+    "beads_drive_quiet.wav": "Fully wet, dense cloud, source 12 dB down. Below the saturator; should sound identical across versions.",
+    "beads_density_000.wav": "Fully wet, Density 0.0 (regular, audio-rate end), 15 s.",
+    "beads_density_010.wav": "Fully wet, Density 0.1 (regular), 15 s.",
+    "beads_density_020.wav": "Fully wet, Density 0.2 (regular), 15 s.",
+    "beads_density_030.wav": "Fully wet, Density 0.3 (regular, sparse), 15 s.",
+    "beads_density_040.wav": "Fully wet, Density 0.4 (regular, sparsest), 15 s.",
+    "beads_density_060.wav": "Fully wet, Density 0.6 (random, sparse), 15 s.",
+    "beads_density_070.wav": "Fully wet, Density 0.7 (random), 15 s.",
+    "beads_density_080.wav": "Fully wet, Density 0.8 (random, dense), 15 s.",
+    "beads_density_090.wav": "Fully wet, Density 0.9 (random, dense), 15 s.",
+    "beads_density_100.wav": "Fully wet, Density 1.0 (random, audio-rate end), 15 s."
+  }
+}

@@ -71,13 +71,19 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
 .name { min-width: 0; }
 .name b { font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .name small { color: var(--muted); font-family: var(--mono); font-size: 11px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name .desc { color: var(--muted); font-size: 13px; line-height: 1.4; margin: 2px 0 3px; text-wrap: pretty; }
+.name .desc:empty { display: none; }
+.about { margin: 0 0 10px; font-size: 13px; color: var(--ink); text-wrap: pretty; }
+.about:empty { display: none; }
+.about b { font-weight: 600; }
 .meas { font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
 .meas .g { color: var(--ink); }
 .meas .warn { color: var(--warn); }
 .trim { display: flex; align-items: center; gap: 6px; }
 .trim input { width: 64px; padding: 4px 6px; font-family: var(--mono); font-size: 12px; }
 .x { border: none; background: none; color: var(--muted); font-size: 18px; padding: 2px 6px; }
-.blind .name small, .blind .meas, .blind .trim { visibility: hidden; }
+.blind .name small, .blind .name .desc, .blind .meas, .blind .trim { visibility: hidden; }
+.blind .name .desc { display: none; }
 .empty { color: var(--muted); padding: 18px; text-align: center; }
 .reveal { margin-top: 10px; font-family: var(--mono); font-size: 12px; white-space: pre-wrap; }
 @media (max-width: 640px) {
@@ -135,6 +141,7 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
   </section>
 
   <section class="panel">
+    <p class="about" id="about"></p>
     <div class="opts" id="opts"><div class="empty">Choose a render above to compare every version of it.</div></div>
     <div class="reveal" id="reveal"></div>
   </section>
@@ -335,7 +342,20 @@ async function loadOption(o) {
 function labelFor(path) {
   const f = files.find((w) => w.path === path);
   const group = f ? f.group.replace(/^renders\//, "") : path;
-  return { group, name: f ? f.name : path.split("/").pop() };
+  return {
+    group,
+    name: f ? f.name : path.split("/").pop(),
+    label: (f && f.label) || group,
+    description: (f && f.description) || "",
+    about: (f && f.about) || "",
+  };
+}
+
+// What the renders are: said once above the options when they all share it,
+// otherwise each row says its own.
+function sharedAbout() {
+  const abouts = [...new Set(options.map((o) => o.about))];
+  return abouts.length === 1 ? abouts[0] : null;
 }
 
 function setOptions(paths) {
@@ -369,7 +389,7 @@ async function loadFiles() {
   const add = $("add");
   let lastGroup = null, og = null;
   files.forEach((f) => {
-    if (f.group !== lastGroup) { og = document.createElement("optgroup"); og.label = f.group; add.appendChild(og); lastGroup = f.group; }
+    if (f.group !== lastGroup) { og = document.createElement("optgroup"); og.label = f.label ? f.label + "  (" + f.group + ")" : f.group; add.appendChild(og); lastGroup = f.group; }
     og.appendChild(new Option(f.name, f.path));
   });
 }
@@ -388,9 +408,13 @@ function slotOrder() { return blindMap || options.map((_, i) => i); }
 function render() {
   const box = $("opts");
   document.body.classList.toggle("blind", !!blindMap);
-  if (!options.length) { box.innerHTML = '<div class="empty">Choose a render above to compare every version of it.</div>'; drawWave(); return; }
+  if (!options.length) { $("about").textContent = ""; box.innerHTML = '<div class="empty">Choose a render above to compare every version of it.</div>'; drawWave(); return; }
   const gains = matchGainsDb();
   box.innerHTML = "";
+  const shared = sharedAbout();
+  const about = $("about");
+  about.textContent = "";
+  if (shared) { const b = document.createElement("b"); b.textContent = "What you're hearing: "; about.append(b, shared); }
   slotOrder().forEach((i, slot) => {
     const o = options[i];
     const row = document.createElement("div");
@@ -399,15 +423,17 @@ function render() {
     const lvl = o.levels ? o.levels[mode === "off" ? "lufs" : mode] : undefined;
     const unit = (mode === "lufs" || mode === "off") ? " LUFS" : " dBFS";
     const peakAfter = o.levels ? o.levels.peak + gains[i] + o.trim : -Infinity;
-    const title = blindMap ? "Option " + String.fromCharCode(65 + slot) : o.group;
+    const title = blindMap ? "Option " + String.fromCharCode(65 + slot) : o.label;
     row.innerHTML =
       '<div class="key">' + (slot + 1) + "</div>" +
-      '<div class="name"><b></b><small></small></div>' +
+      '<div class="name"><b></b><div class="desc"></div><small></small></div>' +
       '<div class="meas">' + (o.levels ? (lvl === undefined ? "measuring…" : fmtDb(lvl) + unit) + '<br><span class="g">gain ' + fmtDb(gains[i] + o.trim) + " dB</span>" +
         (peakAfter > -0.1 ? ' <span class="warn">peak ' + fmtDb(peakAfter) + "</span>" : "") : "loading…") + "</div>" +
       '<div class="trim"><label>trim</label><input type="number" step="0.5" min="-24" max="12" value="' + o.trim + '"></div>' +
       '<button class="x" title="Remove">×</button>';
     row.querySelector("b").textContent = title;
+    row.querySelector(".desc").textContent =
+      shared === null && o.about ? o.description + (o.description ? " " : "") + "Render: " + o.about : o.description;
     row.querySelector("small").textContent = o.path;
     row.addEventListener("click", (e) => { if (!e.target.closest("input,button")) select(i); });
     const inp = row.querySelector("input");
@@ -487,7 +513,7 @@ $("blind").addEventListener("change", (e) => {
     applyGains(false);
     $("reveal").textContent = "";
   } else if (blindMap) {
-    $("reveal").textContent = blindMap.map((i, s) => "Option " + String.fromCharCode(65 + s) + " was " + options[i].path).join("\n");
+    $("reveal").textContent = blindMap.map((i, s) => "Option " + String.fromCharCode(65 + s) + " was " + options[i].label + "  (" + options[i].path + ")").join("\n");
     blindMap = null;
   }
   render();
