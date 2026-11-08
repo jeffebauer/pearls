@@ -29,6 +29,10 @@
 // Ported from Clouds for the wet bus. Clouds runs at 32 kHz; the lines here are
 // sized for 48 kHz and read at offsets scaled by the sample rate at runtime, so
 // the timing is the same at every Quality setting.
+//
+// Two changes from Clouds, chosen by ear because fixed lines at kap 0.625 rang
+// metallic on sustained pitches: kap is 0.5, and the first line of each channel
+// is slowly modulated, the same smear Beads' reverb uses.
 
 #ifndef BEADS_DSP_FX_DIFFUSER_H_
 #define BEADS_DSP_FX_DIFFUSER_H_
@@ -62,7 +66,12 @@ class Diffuser {
     for (int i = 0; i < kNumLines; ++i) {
       offset_[i] = static_cast<int32_t>(kLengths[i] * ratio + 0.5f) - 1;
     }
+    smear_offset_ = 10.0f * ratio;
+    smear_depth_ = 80.0f * ratio;
+    smear_write_ = static_cast<int32_t>(100.0f * ratio + 0.5f);
     engine_.Clear();
+    engine_.SetLFOFrequency(LFO_1, 0.5f / sample_rate);
+    engine_.SetLFOFrequency(LFO_2, 0.3f / sample_rate);
   }
 
   void Process(FloatFrame* in_out, size_t size) {
@@ -88,7 +97,7 @@ class Diffuser {
     E::DelayLine<Memory, 6> apr3;
     E::DelayLine<Memory, 7> apr4;
     E::Context c;
-    const float kap = 0.625f;
+    const float kap = 0.5f;
     // Equal power: the allpassed copy is decorrelated from its input, so a
     // linear blend would dip by about 3 dB halfway. At either end this is
     // the plain signal or the plain diffuser, as in Clouds.
@@ -102,6 +111,12 @@ class Diffuser {
       dry += dry_increment;
       wet_gain += wet_increment;
       engine_.Start(&c);
+
+      // Smear the first line of each channel so its delay never sits still.
+      c.Interpolate(apl1, smear_offset_, LFO_1, smear_depth_, 1.0f);
+      c.Write(apl1, smear_write_, 0.0f);
+      c.Interpolate(apr1, smear_offset_, LFO_2, smear_depth_, 1.0f);
+      c.Write(apr1, smear_write_, 0.0f);
 
       float wet = 0.0f;
       c.Read(in_out->l);
@@ -144,6 +159,9 @@ class Diffuser {
   E engine_;
   float buffer_[kBufferSize];
   int32_t offset_[kNumLines];
+  float smear_offset_;
+  float smear_depth_;
+  int32_t smear_write_;
 
   float amount_;
   float dry_gain_;
