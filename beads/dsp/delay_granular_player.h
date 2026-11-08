@@ -51,8 +51,8 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
       const float duration = p.size.value();
       const bool reverse = duration < 0.3333333f;
 
-      // Grains start at full level; the bus gain below normalises the sum.
-      const float amplitude = 1.0f;
+      // The bus gain below normalises the sum of the envelopes, not the levels.
+      const float amplitude = ComputeGrainLevel(trigger);
       const float pan = ComputeGrainPan(
           trigger, p, float(CountActiveGrains() + 1));
       

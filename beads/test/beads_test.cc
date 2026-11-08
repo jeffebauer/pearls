@@ -1175,6 +1175,114 @@ static float EnergyCentroid(const vector<float>& v) {
   return sum > 0.0f ? moment / sum : 0.0f;
 }
 
+// Renders separated grains of a DC source and reports the quietest and loudest
+// grain and their mean against reference, the peak of a grain with no random
+// level. Grains don't overlap, so the bus gain stays at 1 and each peak is the
+// grain's level.
+float RenderGrainLevels(float level_spread, float reference,
+                        float* lowest, float* highest, float* mean,
+                        WavWriter* wav) {
+  static beads::DelayLine<RESOLUTION_16_BIT, 48000, 2> delay_line;
+  static DelayGranularPlayer player;
+  delay_line.Init(buffers);
+  player.Init(48000.0f);
+
+  Parameters p = FixedWetPatch();
+  p.size.base = 0.55f;  // About 54 ms, well inside the 100 ms interval.
+  p.shape.base = 0.75f;
+
+  FloatFrame dc;
+  dc.l = dc.r = 0.5f;
+  for (int i = 0; i < 24000; ++i) {
+    delay_line.Write(dc, false);
+  }
+
+  float first_peak = 0.0f;
+  *lowest = 1e9f;
+  *highest = 0.0f;
+  float total = 0.0f;
+  const int num_grains = 200;
+  for (int grain = 0; grain < num_grains; ++grain) {
+    float peak = 0.0f;
+    for (int i = 0; i < 4800; ++i) {
+      TriggerGenerator::Output t;
+      t.trigger = i == 0;
+      t.gate = false;
+      t.fractional_sample = 0.0f;
+      t.regularity = 1.0f;
+      t.phase = 0.0f;
+      t.level_spread = level_spread;
+      delay_line.Write(dc, false);
+      FloatFrame frame;
+      frame.l = frame.r = 0.0f;
+      player.Render(&delay_line, t, p, &frame);
+      peak = max(peak, fabsf(frame.l) + fabsf(frame.r));
+      if (wav) {
+        wav->Write(&frame.l, &frame.r, 1);
+      }
+    }
+    if (grain == 0) {
+      first_peak = peak;
+    }
+    const float level = peak / (reference > 0.0f ? reference : first_peak);
+    *lowest = min(*lowest, level);
+    *highest = max(*highest, level);
+    total += level;
+  }
+  *mean = total / float(num_grains);
+  return first_peak;
+}
+
+// The random per-grain level (ticket 11): the depth Density asks for, then the
+// level grains actually get at no, half and full depth. Read by
+// beads/test/checks.py.
+void TestGrainLevel() {
+  FILE* fp = fopen("beads_grain_level_values.csv", "w");
+  fprintf(fp, "key,value\n");
+
+  struct {
+    const char* key;
+    float density;
+    float linear_fm;
+    bool clocked;
+  } runs[] = {
+    { "spread_d000", 0.0f, 0.0f, false },
+    { "spread_d040", 0.4f, 0.0f, false },
+    { "spread_noon", 0.5f, 0.0f, false },
+    { "spread_d076", 0.76f, 0.0f, false },
+    { "spread_d100", 1.0f, 0.0f, false },
+    { "spread_cv", 0.76f, 0.24f, false },
+    { "spread_cv_down", 0.76f, -0.5f, false },
+    { "spread_clock_d040", 0.4f, 0.0f, true },
+    { "spread_clock_noon", 0.5f, 0.0f, true },
+  };
+  for (size_t r = 0; r < sizeof(runs) / sizeof(runs[0]); ++r) {
+    TriggerGenerator g;
+    g.Init(48000.0f);
+    GateFlags flags[kBlockSize];
+    fill(&flags[0], &flags[kBlockSize], GATE_FLAG_LOW);
+    TriggerGenerator::Output out[kBlockSize];
+    g.Render(SEED_BUTTON_STATE_LOCKED, runs[r].clocked ? flags : NULL,
+             runs[r].density, runs[r].linear_fm, 0.0f, out, kBlockSize);
+    fprintf(fp, "%s,%.6f\n", runs[r].key, out[kBlockSize - 1].level_spread);
+  }
+
+  float lowest, highest, mean;
+  const float reference = RenderGrainLevels(
+      0.0f, 0.0f, &lowest, &highest, &mean, NULL);
+  fprintf(fp, "level_none_min,%.6f\nlevel_none_max,%.6f\n", lowest, highest);
+  fprintf(fp, "level_none_mean,%.6f\n", mean);
+  RenderGrainLevels(0.5f, reference, &lowest, &highest, &mean, NULL);
+  fprintf(fp, "level_half_min,%.6f\nlevel_half_max,%.6f\n", lowest, highest);
+  fprintf(fp, "level_half_mean,%.6f\n", mean);
+  WavWriter wav_writer(2, 48000, 20);
+  wav_writer.Open("beads_grain_level.wav");
+  RenderGrainLevels(1.0f, reference, &lowest, &highest, &mean, &wav_writer);
+  fprintf(fp, "level_full_min,%.6f\nlevel_full_max,%.6f\n", lowest, highest);
+  fprintf(fp, "level_full_mean,%.6f\n", mean);
+  fclose(fp);
+}
+
 // The wet diffuser (ticket 10): timing against sample rate, bypass at amount
 // 0, whether its delays move, how long it rings and how far it spreads an
 // impulse at 48 kHz, and the amount the processor picks from Shape. Read by
@@ -2601,6 +2709,7 @@ const NamedTest kTests[] = {
   { "TestGrainEnvelopeShape", &TestGrainEnvelopeShape },
   { "TestProcessorShapeSweep", &TestProcessorShapeSweep },
   { "TestDiffuser", &TestDiffuser },
+  { "TestGrainLevel", &TestGrainLevel },
   { "TestGrainFade", &TestGrainFade },
   { "TestHeadCrossingPolicies", &TestHeadCrossingPolicies },
   { "TestTriggerGenerator", &TestTriggerGenerator },

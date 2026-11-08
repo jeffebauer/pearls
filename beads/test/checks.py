@@ -260,6 +260,66 @@ def diffuser_amount_follows_shape(m):
         "off up to Hann, full at fully clockwise, follows CV, off in delay mode")
 
 
+# Ticket 11: grain levels are relative to a grain with no random level, so 1.0
+# is "as loud as without it". Full depth spreads the grains over 6 dB, quietest
+# to loudest, and make-up gain keeps their average at 1 so the cloud holds its
+# level. That puts the loudest grain at 1/0.75 at full depth, the most it can be.
+GRAIN_LEVEL_TOLERANCE = 0.0005
+MAX_GRAIN_LEVEL = 1.0 / 0.75
+MAX_GRAIN_MEAN_ERROR = 0.03
+
+
+def grain_level_values(m):
+    return m["beads_grain_level.wav"].get("values", {})
+
+
+def grain_level_reaches_6db(m):
+    v = grain_level_values(m)
+    if not v:
+        return False, "no grain levels logged"
+    wrong = []
+    full = v["level_full_min"] / v["level_full_max"]
+    half = v["level_half_min"] / v["level_half_max"]
+    if not 0.49 <= full <= 0.52:
+        wrong.append("full depth spans %.3f, wants about 0.5" % full)
+    if not 0.74 <= half <= 0.77:
+        wrong.append("half depth spans %.3f, wants about 0.75" % half)
+    want = {"spread_d076": 0.5, "spread_d100": 1.0, "spread_cv": 1.0}
+    wrong += ["%s %.3f, wants %.1f" % (k, v[k], w) for k, w in sorted(want.items())
+              if abs(v[k] - w) > 0.01]
+    return not wrong, "; ".join(wrong) or (
+        "quietest grain is %.3f of the loudest at full depth, %.3f at half, "
+        "depth follows the random half and its CV" % (full, half))
+
+
+def grain_level_average_held(m):
+    v = grain_level_values(m)
+    if not v:
+        return False, "no grain levels logged"
+    means = [v["level_none_mean"], v["level_half_mean"], v["level_full_mean"]]
+    loudest = max(v["level_none_max"], v["level_half_max"], v["level_full_max"])
+    worst = max(abs(x - 1.0) for x in means)
+    return (worst <= MAX_GRAIN_MEAN_ERROR
+            and loudest <= MAX_GRAIN_LEVEL + GRAIN_LEVEL_TOLERANCE), (
+        "mean grain level %.3f, %.3f, %.3f at no, half and full depth "
+        "(limit 1 +/- %.2f), loudest grain %.3f (limit %.3f)"
+        % (means[0], means[1], means[2], MAX_GRAIN_MEAN_ERROR, loudest,
+           MAX_GRAIN_LEVEL))
+
+
+def grain_level_none_when_regular(m):
+    v = grain_level_values(m)
+    if not v:
+        return False, "no grain levels logged"
+    keys = ["spread_d000", "spread_d040", "spread_noon", "spread_cv_down",
+            "spread_clock_d040", "spread_clock_noon"]
+    wrong = ["%s %.3f" % (k, v[k]) for k in keys if v[k] != 0.0]
+    if abs(v["level_none_min"] - 1.0) > GRAIN_LEVEL_TOLERANCE:
+        wrong.append("grains vary to %.4f with no depth" % v["level_none_min"])
+    return not wrong, "; ".join(wrong) or (
+        "no depth on the regular half, at noon or below it under CV")
+
+
 CHECKS = [
     # Ticket 01 (fails on stock); ticket 04 should make it pass.
     Check("wet and dry within 1 dB at 12 o'clock",
@@ -308,4 +368,14 @@ CHECKS = [
     # Ticket 10 (fails with Clouds' linear blend: 2.3 dB down).
     Check("level stays flat halfway up the diffuser",
           ["TestProcessorShapeSweep"], diffuser_level_flat),
+    # Ticket 11 (fails before the change: every grain at full level, depth 0).
+    Check("random grain level spans 6 dB and follows the random half",
+          ["TestGrainLevel"], grain_level_reaches_6db),
+    # Ticket 11 (fails before make-up gain: mean 0.75 at full depth).
+    Check("make-up gain holds the average grain level",
+          ["TestGrainLevel"], grain_level_average_held),
+    # Ticket 11 guard: passes before the change by design, so it leans on the
+    # first check to prove the level is really being applied.
+    Check("no random grain level on the regular half or at noon",
+          ["TestGrainLevel"], grain_level_none_when_regular),
 ]

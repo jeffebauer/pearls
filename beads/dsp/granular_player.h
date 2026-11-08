@@ -52,6 +52,10 @@ const float kBusGainRecoveryTime = 0.1f;
 const float kBusGainMaxIncoherence = 0.75f;
 const float kBusGainSpreadScale = 100.0f;
 
+// How far apart the random grain level (ticket 11) can put the quietest and
+// loudest grain: half, 6 dB.
+const float kGrainLevelMaxCut = 0.5f;
+
 struct Parameters {
   RandomizedParameter time;
   RandomizedParameter size;
@@ -143,6 +147,20 @@ class GranularPlayer {
     const float num_active_grains = float(CountActiveGrains() + 1);
     *amplitude = 1.0f / stmlib::Sqrt(num_active_grains);
     *pan = ComputeGrainPan(trigger, p, num_active_grains);
+  }
+
+  // A random level for a grain being born, cut by up to the depth and divided
+  // by the average cut so the cloud keeps its level. It's fixed per grain, so
+  // the make-up costs nothing per sample and can't step when Density moves. It
+  // stays out of the envelope sum below, which would cancel the variation. No
+  // random draw at zero depth, so the regular half of Density renders exactly
+  // as it did.
+  inline float ComputeGrainLevel(const TriggerGenerator::Output& trigger) const {
+    if (trigger.level_spread <= 0.0f) {
+      return 1.0f;
+    }
+    const float depth = kGrainLevelMaxCut * trigger.level_spread;
+    return (1.0f - depth * stmlib::Random::GetFloat()) / (1.0f - 0.5f * depth);
   }
 
   // Gain for the summed grains, from the sum of the envelope values of every

@@ -242,6 +242,7 @@ class GranularProcessor {
     float inv_ratio = 1.0f / static_cast<float>(ratio);
     for (size_t i = 0; i < size / ratio; ++i) {
       out->regularity = in->regularity;
+      out->level_spread = in->level_spread;
 
       bool has_trigger = false;
       float fractional_sample = 0.0f;

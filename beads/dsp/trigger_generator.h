@@ -53,6 +53,8 @@ class TriggerGenerator {
     float fractional_sample;
     float regularity;
     float phase;
+    // How far a grain born now may have its level cut at random, 0 to 1.
+    float level_spread;
   };
 
   void Init(float sample_rate);

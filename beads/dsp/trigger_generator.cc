@@ -310,6 +310,15 @@ void TriggerGenerator::Render(
       }
     }
   }
+
+  // The random grain level (ticket 11) grows across Density's random half, with
+  // CV included, from nothing at the end of the noon dead zone to full.
+  const float level_spread = density > 0.52f
+      ? (density - 0.52f) / 0.48f
+      : 0.0f;
+  for (size_t i = 0; i < size; ++i) {
+    out[i].level_spread = level_spread;
+  }
 }
 
 }  // namespace beads
