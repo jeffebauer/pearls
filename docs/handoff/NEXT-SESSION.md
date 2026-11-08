@@ -1,63 +1,57 @@
-# Next session: after 8 November 2026 (ticket 01 done, wet gain decided)
+# Next session: after 8 November 2026 (ticket 04 done, listening page added)
 
 ## Where things stand
 
-On `master` at `f785350`, pushed to origin (level, nothing ahead). This handoff is a checkpoint commit on top. **Ticket 01 is done** (`08d345f`): `beads/test/measure.py`, `beads/test/checks.py`, and the `TestProcessorWetDry` harness test. `f785350` records Jesse's decision to set the wet gain from measurement (spec decision 2, ADR 0004, `CLAUDE.md` row 1, tickets 04 and 05). **No DSP changes yet. Nothing flashed. No settings backup exists.**
-
-The upstream push block is done: `git remote -v` shows `upstream DISABLED (push)`.
+On `master` at `2f09e03`, pushed to origin, which is level with master. This handoff is a checkpoint commit on top of that, and it is not pushed. **Ticket 04 is done:** `d4381c0` sets `post_gain_wet` from 1.5 to 0.94 (`beads/dsp/processor.cc:212`) and adds a second check, "fully wet render doesn't clip". Jesse's A/B verdict is recorded in the ticket ("B sounds good", LUFS-matched against stock). `53b327e` adds the listening page (`beads/test/listen.py` and `listen.html`, `listen` in `.claude/launch.json`). `CLAUDE.md` row 1 is marked done. **Nothing flashed. No settings backup exists.**
 
 ## Start here
 
-**Ticket 04**, `.scratch/soft-character/issues/04-wet-gain-matches-dry.md`, done test-first:
+**Ticket 05**, `.scratch/soft-character/issues/05-envelope-sum-normalisation.md`: replace the per-grain 1/√(n+1) set at grain birth (`beads/dsp/granular_player.h:122`) with a bus gain of 1/√(max(Σenv², 1)). The gain falls fast when grains pile up and recovers slowly (spec decision 3, ADR 0004). It's next in `CLAUDE.md`'s order.
 
-1. Run `python3 beads/test/measure.py --check`. It fails at +4.1 dB (wet − dry, gated RMS, dense patch).
-2. Tune `post_gain_wet` (1.5) in `beads/dsp/processor.cc:212` until the check passes. Expect about 0.94, but confirm by rendering, because the limiters sit after the mix.
-3. Record the chosen gain and the measured wet − dry in the ticket's Comments.
-4. Render into `renders/04-wet-gain/`, compare against `renders/stock/metrics.txt`, and ask Jesse for the A/B verdict.
-
-Read the ticket and spec decision 2 first.
+- The desktop part can go ahead now: write the check first (RMS spread across a Density sweep narrower than stock), then make it pass. Keep the two ticket 04 checks passing. If the wet − dry check fails, re-tune `post_gain_wet` the way ticket 04 did and record the new value.
+- **The CPU acceptance item is blocked:** it needs the debug pin on the module, so a flash, so the settings backup first. Do the desktop work and leave that box open, or ask Jesse whether to wait.
+- When renders are ready, give Jesse a listening-page link with them preloaded (memory `listening-page`).
 
 ## Waiting on Jesse
 
-- **Settings backup.** Read sector 15 (0x081E0000, 128 KB) with STM32CubeProgrammer into `backups/` (git-ignored), and copy it off this machine. This blocks any flash, and so the CPU measurements in tickets 05, 09 and 10.
-- **Ticket 03, the reference captures**, once ticket 02 lands.
-- **A/B verdicts** on each DSP ticket (04 onwards).
+- **Settings backup.** Read sector 15 (0x081E0000, 128 KB) with STM32CubeProgrammer into `backups/` (git-ignored), and copy it off this machine. It blocks any flash, and so the CPU measurements in tickets 05, 09 and 10.
+- **Ticket 03, the reference captures**, once ticket 02 (`ready-for-agent`, not started) lands.
+- **A/B verdicts** on each DSP ticket from 05 on.
 - **The 15-ticket breakdown** is still unreviewed (07 and 08 could merge, for example).
 - **Optional:** `uv` and a Perplexity key for `/research` (memory `research-script-broken`).
 
 ## In flight
 
-Nothing. Tree clean, no branches, worktrees or delegates.
+Nothing. Tree clean apart from this handoff, no branches or worktrees. The `listen` preview server may still be running in the browser pane, and stopping it is harmless.
 
 ## Will bite
 
-- **`/implement` and `/retro` aren't in this session's skill list.** Ticket 01 was done by hand, and `/retro` never ran. Use `/mattpocock-skills:tdd`, or work from the ticket directly.
-- **The wet level depends on the patch.** The check uses Density 0.9 (about 25 grains a second) and gated RMS, as Jesse chose. A sparse patch measures mostly the gaps between grains: wet − dry went from −16 to +4 dB across the patches tried. See the table in ticket 01's Comments.
-- **The click detector flags `kettel.wav`'s own note onsets** (85 in the dry render). Compare wet click counts with dry and stock, not as absolutes.
-- **Stock fully wet clips 8 samples** on the check patch (peak 0.0 dBFS). Ticket 04's acceptance now asks for no clipping.
-- **The harness writes renders into the repo root.** `measure.py --check` moves them into `renders/check/`. `/beads_*.wav` is git-ignored, and `*.csv` was already ignored.
-- **The attack probe** is a test-only hook in `grain_envelope.h` (`#ifdef TEST`). Ticket 09 rewrites that file, so keep the two probe calls in `Start()` and `Render()`.
-- **The reference source is clip 09 of the Sublustris demos** (picked D chords, CC0 Emily guitar). It's built by `~/Documents/Sites/sublustris-versio/docs/minisite/tools/demos/build_sources.py` from `~/Documents/Sites/resilio-versio/test_audio/demo_sources/cc0/guitar_emily/`. The script writes float WAV, and `AudioSource` in the harness reads raw 16-bit after a 48-byte header, so convert. Don't use the lossy `*-dry.mp3`.
+- **`renders/stock/beads_granular_player.wav` is stale.** It doesn't match a render made at `457bc9c`, before any DSP change. That render is deterministic, so the stock file came from some earlier state. `beads_processor.wav` and the wet/dry pair do match. Ticket 05 changes `granular_player.h`, so re-render stock `TestGranularPlayer` and `TestGranularProcessor` from `457bc9c` first (`git stash` or a worktree, rebuild the harness, render, move the files into `renders/stock/`, re-run `measure.py` into `metrics.txt`). `beads_granular_processor` wasn't hash-checked: its click count went from 336 to 276 with no code path through `processor.cc`, so assume it's stale too.
+- **The wet peak is −0.4 dBFS** on the dense check patch at 0.94. Normalisation could push it either way, and the no-clip check catches it.
+- **Renders:** the harness writes WAVs into the repo root. For a ticket folder, render `TestGranularPlayer`, `TestGranularProcessor`, `TestProcessor` and `TestProcessorWetDry`, move the files (including `beads_wetdry_wet_attacks.csv`) into `renders/<NN-name>/`, then `python3 beads/test/measure.py renders/<NN-name>/*.wav > renders/<NN-name>/metrics.txt`.
+- **The listening page binds 127.0.0.1 only.** Changing the hash reloads the comparison, so you can link to a set of files directly.
+- **`/implement` and `/retro` aren't in the skill list.** Use `/mattpocock-skills:tdd`, or work from the ticket directly.
+- **The wet level depends on the patch:** the check uses Density 0.9 and gated RMS. See ticket 01's Comments for the density table.
+- **The click detector flags `kettel.wav`'s own note onsets** (85 in the dry render). Compare click counts against dry and stock, not as absolutes.
+- **The attack probe** is a test-only hook in `grain_envelope.h` (`#ifdef TEST`). Keep the two probe calls when ticket 09 rewrites the file.
 - **`kInstantCrossfadeTime` is tied to the scheduler thresholds** (`granular_player.h:41`). Ticket 08 must check that ordering still holds.
-- **Density** is periodic left of noon and random right of noon (`trigger_generator.cc:110, 132-137`).
-- **Always build with `./firmware.sh`, never bare `make`.** The linker script lets the image run over the settings sector (ADR 0002).
-- `renders/` and `audio_samples/` are git-ignored, so a fresh clone must regenerate both, including `renders/stock/metrics.txt` (`python3 beads/test/measure.py renders/stock/*.wav`, after rendering stock with `TestProcessorWetDry`).
+- **Always build with `./firmware.sh`, never bare `make`** (ADR 0002).
+- **Reference source:** clip 09 of the Sublustris demos. Built by `~/Documents/Sites/sublustris-versio/docs/minisite/tools/demos/build_sources.py`, which writes float WAV, and the harness reads 16-bit, so convert. Don't use the lossy `*-dry.mp3`.
 
 ## Gates
 
-At `08d345f`; docs only since.
+At `d4381c0`. Since then: tooling and docs only, no DSP changes.
 
 - Harness: builds with 0 errors or warnings.
-- Firmware: image ends at 0x0805ABB0, 1557 KB below the settings sector (unchanged, so the probe is compiled out).
-- `measure.py --check`: 1 of 1 checks fails (expected): wet − dry gated RMS +4.1 dB.
-- Stock baseline in `renders/stock/metrics.txt`. Highlights:
-  - `beads_processor`: peak −3.2 dBFS, RMS −29.3 dBFS, 0 clipped
-  - wet/dry check patch: wet clips 8 samples; attacks are 0.52 ms on all 748 grains
+- Firmware: image ends at 0x0805ABB0, 1557 KB below the settings sector (unchanged from stock).
+- `measure.py --check`: 2 of 2 pass. Wet − dry gated RMS is +0.2 dB, and the wet render has 0 clipped samples.
+- `levels.py renders/04-wet-gain/*.wav`: no clipping. `beads_processor` peak −7.2 / RMS −33.0 dBFS (stock −3.2 / −29.3). Wet/dry: wet −0.4 / −27.0, dry −5.6 / −27.1.
+- Metrics in `renders/04-wet-gain/metrics.txt`, stock in `renders/stock/metrics.txt`.
 
 ## Where to look
 
-- `.scratch/soft-character/issues/04-wet-gain-matches-dry.md`: the next ticket
-- `.scratch/soft-character/spec.md`: decision 2
-- `.scratch/soft-character/issues/01-render-measurement-tool.md`: Comments, for what the tool does and the density table
-- `beads/test/checks.py`: where ticket 04's assertion already lives
-- `.claude/session.md`: gates, including the check command
+- `.scratch/soft-character/issues/05-envelope-sum-normalisation.md`: the next ticket
+- `docs/adr/` (ADR 0004) and `.scratch/soft-character/spec.md`, decision 3
+- `beads/dsp/granular_player.h`: the per-grain gain at line 122, `kInstantCrossfadeTime` at line 41
+- `beads/test/checks.py`: add ticket 05's check here first
+- `.scratch/soft-character/issues/04-wet-gain-matches-dry.md`: Comments, the method to repeat if the gain needs re-tuning
