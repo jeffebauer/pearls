@@ -660,7 +660,7 @@ void TestGranularPlayer() {
   p.size.attenuverter = 0.0f;
   p.size.has_cv = false;
 
-  p.shape.base = 0.33f;
+  p.shape.base = 0.0025f;  // Stock's 0.33, the same window.
   p.shape.attenuverter = 0.0f;
   p.shape.has_cv = false;
 
@@ -932,7 +932,7 @@ void TestProcessor() {
   p.size.attenuverter = 0.0f;
   p.size.has_cv = false;
 
-  p.shape.base = 0.3f;
+  p.shape.base = 0.025f;  // Stock's 0.3, the same window.
   p.shape.attenuverter = 0.0f;
   p.shape.has_cv = false;
 
@@ -981,7 +981,7 @@ Parameters FixedWetPatch() {
   p.size.base = 0.75f;
   p.size.attenuverter = 0.0f;
   p.size.has_cv = false;
-  p.shape.base = 0.3f;
+  p.shape.base = 0.025f;  // Stock's 0.3, the same window.
   p.shape.attenuverter = 0.0f;
   p.shape.has_cv = false;
   p.pitch.base = 0.0f;
@@ -1092,13 +1092,13 @@ void TestProcessorVoiceSteal() {
 }
 
 // A listening patch that sounds granular, unlike FixedWetPatch: fully wet, Time
-// spread over about a second per grain, at the bell of Shape. About 9 grains
+// spread over about a second per grain, at Hann on Shape. About 9 grains
 // overlap at Size 0.75 and Density 0.9. Pitch stays fixed: randomising it made
 // the render seasick and hard to judge.
 void TestProcessorCloud() {
   Parameters p = FixedWetPatch();
   p.time.attenuverter = 0.25f;
-  p.shape.base = 0.66f;
+  p.shape.base = 0.75f;
   RenderProcessorPath("beads_cloud.wav", 1.0f, NULL, 0.9f, 30, 1.0f, p);
   // Source 6 dB up, so the blended bus gain drives the wet saturator (ticket 16).
   RenderProcessorPath("beads_cloud_hot.wav", 1.0f, NULL, 0.9f, 30, 2.0f, p);
@@ -1109,7 +1109,7 @@ void TestProcessorCloud() {
 void TestProcessorCloudLevel() {
   Parameters p = FixedWetPatch();
   p.time.attenuverter = 0.25f;
-  p.shape.base = 0.66f;
+  p.shape.base = 0.75f;
   const float densities[] = { 0.6f, 0.7f, 0.8f, 0.9f, 1.0f };
   char filename[64];
   for (size_t i = 0; i < sizeof(densities) / sizeof(densities[0]); ++i) {

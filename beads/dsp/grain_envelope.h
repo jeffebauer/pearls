@@ -30,8 +30,11 @@
 #define BEADS_DSP_GRAIN_ENVELOPE_H_
 
 #include "stmlib/stmlib.h"
+#include "stmlib/dsp/dsp.h"
 
 #include <algorithm>
+
+#include "beads/resources.h"
 
 namespace beads {
 
@@ -60,7 +63,8 @@ class GrainEnvelope {
     phase_increment_[STAGE_RELEASE] = 0.5f;
     phase_increment_[STAGE_DONE] = 0.0f;
     smoothness_ = 0.0f;
-    
+    gaussian_ = 0.0f;
+
     min_attack_ = 0.003f * sample_rate;
     min_release_ = 0.010f * sample_rate;
   }
@@ -72,26 +76,25 @@ class GrainEnvelope {
     if (grain_envelope_probe) grain_envelope_probe->OnStart(this);
 #endif  // TEST
     
-    const float sustain = std::max(1.0f - 3.0f * shape, 0.0f);
-    shape = (shape - 0.33333333f) * 1.5f;
-    if (shape < 0.0f) {
-      shape = 0.0f;
-    } else if (shape < 0.5f) {
-      shape = shape * shape * shape * 4.0f;
-    }
-    const float attack = shape;
-    const float release = (1.0f - attack) * (1.0f - sustain);
-    
-    //          attack     sustain     release     smoothness
-    // ------------------------------------------------------
-    // Square        0           1           0              0
-    //               0         0.5           0              0
-    // Decay         0           0           1              0
-    //            0.25           0        0.75            0.5
-    // Bell        0.5           0         0.5              1
-    //            0.75           0        0.25            0.5
-    // Reverse       1           0           0              0
-    
+    CONSTRAIN(shape, 0.0f, 1.0f);
+    const float x = shape * 4.0f;
+    const float a = std::min(std::max(0.25f * (x - 1.0f), 0.0f), 0.5f);
+    const float attack = a;
+    const float sustain = x < 1.0f ? x : 1.0f - 2.0f * a;
+    const float release = x < 1.0f ? 1.0f - x : a;
+
+    //             attack  sustain  release  smoothness  gaussian
+    // ----------------------------------------------------------
+    // 0.00 Decay       0        0        1           0         0
+    // 0.25 Square      0        1        0           0         0
+    // 0.50 Tukey    0.25      0.5     0.25           1         0
+    // 0.75 Hann      0.5        0      0.5           1         0
+    // 1.00 Gaussian  0.5        0      0.5           1         1
+    //
+    // Every column is continuous across the knob, so consecutive grains never
+    // jump. SmoothStep stands in for the raised cosine of a true Hann (within
+    // about 1%), as it did for stock's bell.
+
     const float attack_duration = std::max(
         duration * attack,
         min_attack_ * (1.0f + 3.0f * sustain));
@@ -101,7 +104,8 @@ class GrainEnvelope {
     phase_increment_[STAGE_ATTACK] = 1.0f / attack_duration;
     phase_increment_[STAGE_SUSTAIN] = 1.0f / sustain_duration;
     phase_increment_[STAGE_RELEASE] = 1.0f / release_duration;
-    smoothness_ = attack < 0.5f ? 2.0f * attack : 2.0f - 2.0f * attack;
+    smoothness_ = std::min(std::max(x - 1.0f, 0.0f), 1.0f);
+    gaussian_ = std::min(std::max(x - 3.0f, 0.0f), 1.0f);
   }
 
   inline void Start(float duration, float shape, float fractional_sample) {
@@ -135,6 +139,10 @@ class GrainEnvelope {
       const float t = attack ? phase_ : 1.0f - phase_;
       const float base = attack ? t : (t * t) * (t * t);
       value = base + (stmlib::SmoothStep(t) - base) * smoothness_;
+      if (gaussian_ > 0.0f) {
+        value += (stmlib::Interpolate(lut_gaussian, t, 128.0f) - value) *
+            gaussian_;
+      }
     }
 
     phase_ += phase_increment_[stage_];
@@ -163,7 +171,8 @@ class GrainEnvelope {
   float phase_;
   float phase_increment_[STAGE_LAST];
   float smoothness_;
-  
+  float gaussian_;
+
   float min_attack_;
   float min_release_;
 

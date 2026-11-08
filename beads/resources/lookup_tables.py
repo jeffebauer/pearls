@@ -45,3 +45,15 @@ WAVETABLE_SIZE = 1024
 t = numpy.arange(0.0, WAVETABLE_SIZE + WAVETABLE_SIZE / 4 + 1) / WAVETABLE_SIZE
 x = numpy.sin(2 * numpy.pi * t)
 lookup_tables += [('sine', x)]
+
+
+"""----------------------------------------------------------------------------
+Gaussian grain window, rising half
+----------------------------------------------------------------------------"""
+
+SIZE = 128
+GAUSSIAN_SIGMA = 0.3  # In half-windows.
+t = numpy.minimum(numpy.arange(0.0, SIZE + 2) / SIZE, 1.0)
+x = numpy.exp(-0.5 * ((1.0 - t) / GAUSSIAN_SIGMA) ** 2)
+x = (x - x[0]) / (1.0 - x[0])  # Reaches zero at the grain's edge.
+lookup_tables += [('gaussian', x)]

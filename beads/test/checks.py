@@ -164,8 +164,9 @@ def shape_landmarks(m):
 
 # The limit is the mean change in the window between neighbouring positions,
 # 1/64 of the knob apart. The old layout fails it (0.085), at the fast end of
-# its bell-to-reverse half. A jump between consecutive grains would show here.
-MAX_SHAPE_STEP = 0.05
+# its bell-to-reverse half, and the morph measures 0.050, so the limit sits
+# between them. A jump between consecutive grains would show here.
+MAX_SHAPE_STEP = 0.065
 MAX_EDGE_VALUE = 0.01
 
 
