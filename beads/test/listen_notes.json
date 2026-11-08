@@ -168,6 +168,18 @@
     "renders/check": {
       "label": "Latest check run",
       "description": "Whatever the working tree rendered on the last `measure.py --check`. Not a fixed version."
+    },
+    "renders/11-random-grain-level": {
+      "label": "11: random grain level",
+      "description": "Each grain gets a random level at birth, spread over 6 dB and growing across Density's random half. Make-up gain holds the average, so the cloud keeps its level."
+    },
+    "renders/11-random-grain-level/sources": {
+      "label": "11: cloud before and after, four sources",
+      "description": "The cloud patch at Density 0.9, which is about 80% of the full depth. 'Before' is the commit just before this change."
+    },
+    "renders/11-random-grain-level/density-before": {
+      "label": "11: Density sweep, before the change",
+      "description": "The control for the Density sweep. Density 0 to 0.4 is byte-identical to the 11 folder."
     }
   },
 
@@ -220,6 +232,14 @@
     "smear.wav": {"label": "Modulated, kap 0.625", "about": "Full smear, but the first delay drifts slowly so no fixed pitch can build. Listen for the tinny tail going, and for any chorus or wobble it adds."},
     "smear_kap050.wav": {"label": "Modulated, kap 0.5", "about": "Shorter ring plus the drift. Listen for whether it's the cleanest, and whether it has lost depth against the 0.625 version."},
     "beads_shape_088.wav": "Cloud patch, Shape halfway from 3 o'clock to fully clockwise. 10: half Hann-to-Gaussian, half diffuser.",
-    "beads_shape_100.wav": "Cloud patch, Shape fully clockwise. 09: Gaussian. 10: Gaussian with the full diffuser. Stock: reverse."
+    "beads_shape_100.wav": "Cloud patch, Shape fully clockwise. 09: Gaussian. 10: Gaussian with the full diffuser. Stock: reverse.",
+    "cloud_kettel_before.wav": {"label": "Test source: before", "about": "Every grain at the same level. The reference for texture."},
+    "cloud_kettel_after.wav": {"label": "Test source: random level", "about": "Listen for grains standing forward and back, rather than an even wash."},
+    "cloud_guitar_before.wav": {"label": "Guitar: before", "about": "Every grain at the same level. The reference for texture."},
+    "cloud_guitar_after.wav": {"label": "Guitar: random level", "about": "Picked notes show it best. Listen for movement in the cloud, and whether it turns uneven or lumpy."},
+    "cloud_synth_before.wav": {"label": "Synth: before", "about": "Every grain at the same level. The reference for texture."},
+    "cloud_synth_after.wav": {"label": "Synth: random level", "about": "Sustained chords hide timing, so any added shimmer is the level. Listen for a gentle flutter versus a wobble."},
+    "cloud_groove_before.wav": {"label": "Groove: before", "about": "Every grain at the same level. The reference for texture."},
+    "cloud_groove_after.wav": {"label": "Groove: random level", "about": "Listen for whether the transients still feel even, or whether some drop out."}
   }
 }

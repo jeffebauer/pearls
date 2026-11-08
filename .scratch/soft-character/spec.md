@@ -37,7 +37,7 @@ Get a soft, smooth, Arbhar-like wet character without giving up live, always-on 
 7. **Diffuser.** Clouds' 4+4 allpass diffuser goes on the wet path, before the mix. Its amount runs from 0 at Hann to 1 at fully clockwise.
    - Delay lengths ×1.5 for 48 kHz: L 189/270/404/666, R 227/308/368/608, with `kap` 0.625 and `FxEngine<4096, FORMAT_32_BIT>`.
    - Read offsets are scaled by sample rate at runtime, so 32 kHz Vintage Digital matches stock Clouds and 24 kHz is covered too.
-8. **Random per-grain level**, set at birth. Its depth follows the random half of Density, growing alongside random timing. It is downward only, reaching −6 dB at full random. The clocked half has none.
+8. **Random per-grain level**, set at birth. Its depth follows the random half of Density, growing alongside random timing. It spreads grains over 6 dB at full random, with make-up gain holding their average so the cloud keeps its level (changed from "downward only" at ticket 11, when that cost the wet about 1.7 dB against the dry). The clocked half has none.
 9. **Density as overlap.** When no clock is patched, Density sets the average overlap (grains per grain length) instead of grains per second, so changing Size keeps the cloud equally dense. With a clock patched, division and probability stay stock.
 10. **Stereo width**, one change:
     - a ±30% minimum pan spread on the wet path
