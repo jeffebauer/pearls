@@ -61,7 +61,7 @@ class GrainEnvelope {
     phase_increment_[STAGE_DONE] = 0.0f;
     smoothness_ = 0.0f;
     
-    min_attack_ = 0.0005f * sample_rate;
+    min_attack_ = 0.003f * sample_rate;
     min_release_ = 0.010f * sample_rate;
   }
 
