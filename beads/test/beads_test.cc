@@ -341,6 +341,56 @@ void TestPanMatrix() {
   }
 }
 
+// The grain window at 65 positions of Shape, for a long grain (nothing on the
+// attack and release floors) and a short one (20 ms, on the floors). The CSV is
+// read by the checks in beads/test/checks.py (ticket 09). The WAV is the same
+// sweep on a 220 Hz sine, to hear or look at, one 100 ms grain per position.
+void TestGrainEnvelopeShape() {
+  const int kPositions = 65;
+  const int kCurvePoints = 129;
+  const float kDurations[] = { 48000.0f, 960.0f };
+
+  FILE* fp = fopen("beads_envelope_shape_curves.csv", "w");
+  fprintf(fp, "shape,duration,first,last,peak,curve\n");
+
+  GrainEnvelope envelope;
+  envelope.Init(float(kSampleRate));
+
+  for (size_t d = 0; d < sizeof(kDurations) / sizeof(kDurations[0]); ++d) {
+    for (int i = 0; i < kPositions; ++i) {
+      const float shape = float(i) / float(kPositions - 1);
+      envelope.Start(kDurations[d], shape);
+      vector<float> v;
+      while (!envelope.done() && v.size() < 4 * size_t(kDurations[d]) + 48000) {
+        v.push_back(envelope.Render());
+      }
+      fprintf(fp, "%.6f,%.0f,%.6f,%.6f,%.6f", shape, kDurations[d],
+              v.front(), v.back(), *max_element(v.begin(), v.end()));
+      for (int k = 0; k < kCurvePoints; ++k) {
+        const size_t index = size_t(
+            float(k) / float(kCurvePoints - 1) * float(v.size() - 1) + 0.5f);
+        fprintf(fp, ",%.6f", v[index]);
+      }
+      fprintf(fp, "\n");
+    }
+  }
+  fclose(fp);
+
+  WavWriter wav_writer(2, kSampleRate, 7);
+  wav_writer.Open("beads_envelope_shape.wav");
+  float phase = 0.0f;
+  for (int i = 0; i < kPositions; ++i) {
+    envelope.Start(4800.0f, float(i) / float(kPositions - 1));
+    for (int j = 0; j < 4800; ++j) {
+      phase += 220.0f / float(kSampleRate);
+      if (phase >= 1.0f) phase -= 1.0f;
+      float sample = 0.5f * envelope.Render() * sinf(2.0f * 3.14159265f * phase);
+      float copy = sample;
+      wav_writer.Write(&sample, &copy, 1);
+    }
+  }
+}
+
 void TestGrainFade() {
   WavWriter wav_writer(4, kSampleRate, 1);
   wav_writer.Open("beads_grain_fade.wav");
@@ -1073,6 +1123,20 @@ void TestProcessorCloudLevel() {
     snprintf(filename, sizeof(filename), "beads_cloudlevel_t%03d.wav",
              int(spreads[i] * 100.0f + 0.5f));
     RenderProcessorPath(filename, 1.0f, NULL, 0.9f, 15, 1.0f, p);
+  }
+}
+
+// The cloud patch at five positions of Shape (ticket 09), 30 s each.
+void TestProcessorShapeSweep() {
+  Parameters p = FixedWetPatch();
+  p.time.attenuverter = 0.25f;
+  const float positions[] = { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
+  char filename[64];
+  for (size_t i = 0; i < sizeof(positions) / sizeof(positions[0]); ++i) {
+    p.shape.base = positions[i];
+    snprintf(filename, sizeof(filename), "beads_shape_%03d.wav",
+             int(positions[i] * 100.0f + 0.5f));
+    RenderProcessorPath(filename, 1.0f, NULL, 0.9f, 30, 1.0f, p);
   }
 }
 
@@ -2368,6 +2432,8 @@ const NamedTest kTests[] = {
   { "TestDelayLine", &TestDelayLine },
   { "TestGrain", &TestGrain },
   { "TestPanMatrix", &TestPanMatrix },
+  { "TestGrainEnvelopeShape", &TestGrainEnvelopeShape },
+  { "TestProcessorShapeSweep", &TestProcessorShapeSweep },
   { "TestGrainFade", &TestGrainFade },
   { "TestHeadCrossingPolicies", &TestHeadCrossingPolicies },
   { "TestTriggerGenerator", &TestTriggerGenerator },

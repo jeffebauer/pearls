@@ -6,6 +6,7 @@ it needs rendered and a function that takes {render filename: metrics} (the
 dicts built by measure.measure_file) and returns (passed, detail).
 """
 
+import math
 from collections import namedtuple
 
 Check = namedtuple("Check", "name renders fn")
@@ -113,6 +114,75 @@ def cloud_hot_not_clipped(m):
         % (clipped, m["beads_cloud_hot.wav"]["peak_dbfs"]))
 
 
+def long_grain_curves(m):
+    """{Shape position: window of a 1 s grain, 129 points across it}."""
+    rows = m["beads_envelope_shape.wav"].get("envelope_curves", [])
+    return {r["shape"]: r["curve"] for r in rows if r["duration"] == 48000.0}
+
+
+def asymmetry(c):
+    return max(abs(a - b) for a, b in zip(c, reversed(c)))
+
+
+def flat_fraction(c):
+    return sum(1 for v in c if v >= 0.99) / len(c)
+
+
+def hann_error(c):
+    n = len(c) - 1
+    return max(abs(v - 0.5 * (1.0 - math.cos(2.0 * math.pi * i / n)))
+               for i, v in enumerate(c))
+
+
+# What the knob should land on at each quarter. The Gaussian's width isn't
+# pinned: it has to be symmetric, peak in the middle and be narrower than Hann
+# (whose mean is 0.5).
+def shape_landmarks(m):
+    curves = long_grain_curves(m)
+    if len(curves) != 65:
+        return False, "expected 65 Shape positions, got %d" % len(curves)
+    wrong = []
+    decay = curves[0.0]
+    if decay.index(max(decay)) > 6 or sum(decay) / len(decay) > 0.35:
+        wrong.append("0.00 isn't a decay")
+    if flat_fraction(curves[0.25]) < 0.9:
+        wrong.append("0.25 isn't a square")
+    tukey = curves[0.5]
+    if not 0.4 <= flat_fraction(tukey) <= 0.6 or asymmetry(tukey) > 0.02:
+        wrong.append("0.50 isn't a Tukey (flat %.2f, asymmetry %.2f)"
+                     % (flat_fraction(tukey), asymmetry(tukey)))
+    if hann_error(curves[0.75]) > 0.03:
+        wrong.append("0.75 is %.2f from a Hann" % hann_error(curves[0.75]))
+    gauss = curves[1.0]
+    mean = sum(gauss) / len(gauss)
+    if (asymmetry(gauss) > 0.02 or gauss.index(max(gauss)) != len(gauss) // 2
+            or not 0.3 <= mean <= 0.45):
+        wrong.append("1.00 isn't a Gaussian (asymmetry %.2f, mean %.2f)"
+                     % (asymmetry(gauss), mean))
+    return not wrong, "; ".join(wrong) or "decay, square, Tukey, Hann, Gaussian"
+
+
+# The limit is the mean change in the window between neighbouring positions,
+# 1/64 of the knob apart. The old layout fails it (0.085), at the fast end of
+# its bell-to-reverse half. A jump between consecutive grains would show here.
+MAX_SHAPE_STEP = 0.05
+MAX_EDGE_VALUE = 0.01
+
+
+def shape_continuous_with_zero_edges(m):
+    rows = m["beads_envelope_shape.wav"].get("envelope_curves", [])
+    if not rows:
+        return False, "no envelope curves logged"
+    curves = long_grain_curves(m)
+    positions = sorted(curves)
+    steps = [sum(abs(a - b) for a, b in zip(curves[p], curves[q])) / len(curves[p])
+             for p, q in zip(positions, positions[1:])]
+    edge = max(max(abs(r["first"]), abs(r["last"])) for r in rows)
+    return max(steps) <= MAX_SHAPE_STEP and edge <= MAX_EDGE_VALUE, (
+        "largest step between positions %.3f (limit %.2f), edge value %.4f (limit %.2f)"
+        % (max(steps), MAX_SHAPE_STEP, edge, MAX_EDGE_VALUE))
+
+
 CHECKS = [
     # Ticket 01 (fails on stock); ticket 04 should make it pass.
     Check("wet and dry within 1 dB at 12 o'clock",
@@ -142,4 +212,10 @@ CHECKS = [
     # Ticket 16 guard: the louder cloud mustn't clip with the source 6 dB up.
     Check("cloud with the source 6 dB up doesn't clip",
           ["TestProcessorCloud"], cloud_hot_not_clipped),
+    # Ticket 09 (fails before the morph: the old layout's windows).
+    Check("Shape lands on decay, square, Tukey, Hann, Gaussian",
+          ["TestGrainEnvelopeShape"], shape_landmarks),
+    # Ticket 09 (fails before the morph: 0.085 between neighbouring positions).
+    Check("Shape morph continuous, windows reach zero at both edges",
+          ["TestGrainEnvelopeShape"], shape_continuous_with_zero_edges),
 ]

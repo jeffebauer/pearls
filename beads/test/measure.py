@@ -185,6 +185,18 @@ def read_attacks(path):
     return rises
 
 
+def read_envelope_curves(path):
+    """Rows of TestGrainEnvelopeShape's CSV, one per Shape position and grain."""
+    rows = []
+    with open(path) as f:
+        next(f)
+        for line in f:
+            v = [float(x) for x in line.strip().split(",")]
+            rows.append({"shape": v[0], "duration": v[1], "first": v[2],
+                         "last": v[3], "peak": v[4], "curve": v[5:]})
+    return rows
+
+
 def measure_file(path):
     rate, chans = read_wav(path)
     frame = max(1, rate // 1000)
@@ -203,6 +215,9 @@ def measure_file(path):
         csv = path[:-len(".wav")] + "_attacks.csv"
         if os.path.exists(csv):
             m["attacks_ms"] = read_attacks(csv)
+    curves = path[:-len(".wav")] + "_curves.csv"
+    if os.path.exists(curves):
+        m["envelope_curves"] = read_envelope_curves(curves)
     return m
 
 
