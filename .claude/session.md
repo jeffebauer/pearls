@@ -70,5 +70,10 @@ it, or record that it's pending.
 ## Branches
 Work on `master` for single-commit changes. Branch `exp/<what>` for anything that may be thrown away.
 
+## Prune
+- Outputs: listening examples in `renders/`: sweeps and comparisons inside ticket folders (`sweep*/`, `sources/`, `q*/`, `pre/`, `*-before/`). Settled once the ticket records Jesse's verdict.
+- Keep: `renders/stock/`, `renders/stock-shape/`, `renders/sources/`, `renders/check/`, and the top level of each ticket folder (final renders and `metrics.txt`).
+- Index: `beads/test/listen_notes.json`
+
 ## Delegation
 off
