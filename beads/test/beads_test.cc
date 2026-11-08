@@ -50,6 +50,9 @@
 #include "beads/dsp/wavetable_granular_player.h"
 #include "beads/dsp/wavetable_voice.h"
 
+#include "clouds/dsp/frame.h"
+#include "clouds/dsp/fx/diffuser.h"
+
 using namespace beads;
 using namespace std;
 using namespace stmlib;
@@ -1138,6 +1141,122 @@ void TestProcessorShapeSweep() {
              int(positions[i] * 100.0f + 0.5f));
     RenderProcessorPath(filename, 1.0f, NULL, 0.9f, 30, 1.0f, p);
   }
+}
+
+// The wet diffuser (ticket 10): sample-for-sample against Clouds' own at 32 kHz,
+// bypass at amount 0, how far it spreads an impulse at 48 kHz, and the amount
+// the processor picks from Shape. Read by beads/test/checks.py.
+void TestDiffuser() {
+  FILE* fp = fopen("beads_diffuser_values.csv", "w");
+  fprintf(fp, "key,value\n");
+
+  static Diffuser diffuser;
+  static float clouds_buffer[2048];
+  static clouds::Diffuser clouds_diffuser;
+  clouds_diffuser.Init(clouds_buffer);
+  clouds_diffuser.set_amount(1.0f);
+  diffuser.Init(32000.0f);
+  diffuser.set_amount(1.0f);
+
+  WavWriter wav_writer(2, 32000, 2);
+  wav_writer.Open("beads_diffuser.wav");
+  float max_diff = 0.0f;
+  for (int block = 0; block < 64000 / int(kBlockSize); ++block) {
+    FloatFrame a[kBlockSize];
+    clouds::FloatFrame b[kBlockSize];
+    for (size_t i = 0; i < kBlockSize; ++i) {
+      a[i].l = b[i].l = 0.5f * (Random::GetFloat() - 0.5f);
+      a[i].r = b[i].r = 0.5f * (Random::GetFloat() - 0.5f);
+    }
+    diffuser.Process(a, kBlockSize);
+    clouds_diffuser.Process(b, kBlockSize);
+    if (block == 0) continue;  // Our amount ramps in over the first block.
+    for (size_t i = 0; i < kBlockSize; ++i) {
+      max_diff = max(max_diff, fabsf(a[i].l - b[i].l));
+      max_diff = max(max_diff, fabsf(a[i].r - b[i].r));
+      wav_writer.Write(&a[i].l, &a[i].r, 1);
+    }
+  }
+  fprintf(fp, "clouds_max_diff,%.9f\n", max_diff);
+
+  diffuser.Init(48000.0f);
+  float bypass_diff = 0.0f;
+  for (int block = 0; block < 100; ++block) {
+    FloatFrame a[kBlockSize];
+    for (size_t i = 0; i < kBlockSize; ++i) {
+      a[i].l = a[i].r = float(i) / float(kBlockSize) - 0.5f;
+    }
+    diffuser.Process(a, kBlockSize);
+    for (size_t i = 0; i < kBlockSize; ++i) {
+      bypass_diff = max(bypass_diff,
+                        fabsf(a[i].l - (float(i) / float(kBlockSize) - 0.5f)));
+    }
+  }
+  fprintf(fp, "bypass_max_diff,%.9f\n", bypass_diff);
+
+  // Settle the amount on silence, then send one impulse down the left.
+  diffuser.Init(48000.0f);
+  diffuser.set_amount(1.0f);
+  float energy = 0.0f, late_energy = 0.0f;
+  int n = 0;
+  for (int block = -1; block < 4800 / int(kBlockSize); ++block) {
+    FloatFrame a[kBlockSize];
+    fill(&a[0].l, &a[0].l + kBlockSize * 2, 0.0f);
+    if (block == 0) a[0].l = 1.0f;
+    diffuser.Process(a, kBlockSize);
+    if (block < 0) continue;
+    for (size_t i = 0; i < kBlockSize; ++i, ++n) {
+      const float e = a[i].l * a[i].l;
+      energy += e;
+      if (n >= 48) late_energy += e;  // After the first millisecond.
+    }
+  }
+  fprintf(fp, "impulse_energy,%.6f\n", energy);
+  fprintf(fp, "smear_fraction,%.6f\n", energy > 0.0f ? late_energy / energy : 0.0f);
+
+  static Processor proc;
+  proc.Init(buffers, reverb_buffer);
+  proc.Configure(Processor::MEDIA_DIGITAL, false);
+  Processor::MixParameters m;
+  m.feedback = 0.0f;
+  m.dry_wet = 1.0f;
+  m.reverb_amount = 0.0f;
+  m.output_gate = false;
+  ModulatedParameter d;
+  d.base = 0.9f;
+  d.cv = 0.0f;
+  struct Run {
+    const char* key;
+    float shape, attenuverter, cv, size;
+    bool has_cv;
+    int blocks;
+  } runs[] = {
+    { "amount_shape_050", 0.5f, 0.0f, 0.0f, 0.75f, false, 16 },
+    { "amount_shape_075", 0.75f, 0.0f, 0.0f, 0.75f, false, 16 },
+    { "amount_shape_088", 0.875f, 0.0f, 0.0f, 0.75f, false, 16 },
+    { "amount_shape_100", 1.0f, 0.0f, 0.0f, 0.75f, false, 16 },
+    { "amount_shape_cv", 0.75f, 0.5f, 0.5f, 0.75f, true, 16 },
+    { "amount_delay_mode", 1.0f, 0.0f, 0.0f, 1.0f, false, 8000 },
+  };
+  for (size_t r = 0; r < sizeof(runs) / sizeof(runs[0]); ++r) {
+    Parameters p = FixedWetPatch();
+    p.shape.base = runs[r].shape;
+    p.shape.attenuverter = runs[r].attenuverter;
+    p.shape.cv = runs[r].cv;
+    p.shape.has_cv = runs[r].has_cv;
+    p.size.base = runs[r].size;
+    for (int block = 0; block < runs[r].blocks; ++block) {
+      FloatFrame in[kBlockSize];
+      FloatFrame out[kBlockSize];
+      bool freeze[kBlockSize];
+      fill(&in[0].l, &in[0].l + kBlockSize * 2, 0.0f);
+      fill(&freeze[0], &freeze[kBlockSize], false);
+      proc.Process(SEED_BUTTON_STATE_LOCKED, NULL, freeze, d, p, m, in, out,
+                   kBlockSize);
+    }
+    fprintf(fp, "%s,%.6f\n", runs[r].key, proc.diffuser_amount());
+  }
+  fclose(fp);
 }
 
 void TestProcessorDelay() {
@@ -2434,6 +2553,7 @@ const NamedTest kTests[] = {
   { "TestPanMatrix", &TestPanMatrix },
   { "TestGrainEnvelopeShape", &TestGrainEnvelopeShape },
   { "TestProcessorShapeSweep", &TestProcessorShapeSweep },
+  { "TestDiffuser", &TestDiffuser },
   { "TestGrainFade", &TestGrainFade },
   { "TestHeadCrossingPolicies", &TestHeadCrossingPolicies },
   { "TestTriggerGenerator", &TestTriggerGenerator },

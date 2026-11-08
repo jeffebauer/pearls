@@ -33,6 +33,7 @@
 
 #include "beads/dsp/granular_processor.h"
 #include "beads/dsp/modulated_parameter.h"
+#include "beads/dsp/fx/diffuser.h"
 #include "beads/dsp/fx/reverb.h"
 #include "beads/dsp/fx/wow_and_flutter.h"
 
@@ -75,6 +76,10 @@ class Processor {
   inline Media media() const { return media_; }
   inline bool mono() const { return mono_; }
   
+#ifdef TEST
+  float diffuser_amount() const { return diffuser_.amount(); }
+#endif  // TEST
+
   inline float sample_rate() const {
 #ifdef ENABLE_HARDWARE_24K
     float sr[4] = { 24000.0f, 48000.0f, 32000.0f, 48000.0f };
@@ -201,6 +206,7 @@ class Processor {
   float wet_;
   
   WowAndFlutter wow_and_flutter_;
+  Diffuser diffuser_;
   Reverb reverb_;
   Limiter pre_reverb_limiter_;
   Limiter output_limiter_;

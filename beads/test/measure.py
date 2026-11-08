@@ -197,6 +197,14 @@ def read_envelope_curves(path):
     return rows
 
 
+def read_values(path):
+    """A key,value CSV written alongside a render."""
+    with open(path) as f:
+        next(f)
+        return {k: float(v) for k, v in
+                (line.strip().split(",") for line in f if line.strip())}
+
+
 def measure_file(path):
     rate, chans = read_wav(path)
     frame = max(1, rate // 1000)
@@ -218,6 +226,9 @@ def measure_file(path):
     curves = path[:-len(".wav")] + "_curves.csv"
     if os.path.exists(curves):
         m["envelope_curves"] = read_envelope_curves(curves)
+    values = path[:-len(".wav")] + "_values.csv"
+    if os.path.exists(values):
+        m["values"] = read_values(values)
     return m
 
 

@@ -184,6 +184,47 @@ def shape_continuous_with_zero_edges(m):
         % (max(steps), MAX_SHAPE_STEP, edge, MAX_EDGE_VALUE))
 
 
+def diffuser_values(m):
+    return m["beads_diffuser.wav"].get("values", {})
+
+
+# Ticket 10: the port at 32 kHz is Clouds' diffuser, sample for sample.
+MAX_CLOUDS_DIFF = 1e-5
+
+
+def diffuser_matches_clouds(m):
+    v = diffuser_values(m)
+    if not v:
+        return False, "no diffuser values logged"
+    diff, bypass = v["clouds_max_diff"], v["bypass_max_diff"]
+    return diff <= MAX_CLOUDS_DIFF and bypass == 0.0, (
+        "largest difference from Clouds at 32 kHz %.2e (limit %.0e), "
+        "at amount 0 %.2e (must be 0)" % (diff, MAX_CLOUDS_DIFF, bypass))
+
+
+def diffuser_spreads_energy(m):
+    v = diffuser_values(m)
+    if not v:
+        return False, "no diffuser values logged"
+    smear, energy = v["smear_fraction"], v["impulse_energy"]
+    return smear >= 0.5 and 0.9 <= energy <= 1.1, (
+        "%.0f%% of an impulse's energy after the first millisecond (needs 50%%), "
+        "total energy %.2f (needs 0.9 to 1.1)" % (100.0 * smear, energy))
+
+
+def diffuser_amount_follows_shape(m):
+    v = diffuser_values(m)
+    if not v:
+        return False, "no diffuser values logged"
+    want = {"amount_shape_050": 0.0, "amount_shape_075": 0.0,
+            "amount_shape_088": 0.5, "amount_shape_100": 1.0,
+            "amount_shape_cv": 1.0, "amount_delay_mode": 0.0}
+    wrong = ["%s %.3f, wants %.1f" % (k, v[k], w) for k, w in sorted(want.items())
+             if abs(v[k] - w) > 0.01]
+    return not wrong, "; ".join(wrong) or (
+        "off up to Hann, full at fully clockwise, follows CV, off in delay mode")
+
+
 CHECKS = [
     # Ticket 01 (fails on stock); ticket 04 should make it pass.
     Check("wet and dry within 1 dB at 12 o'clock",
@@ -219,4 +260,11 @@ CHECKS = [
     # Ticket 09 (fails before the morph: 0.085 between neighbouring positions).
     Check("Shape morph continuous, windows reach zero at both edges",
           ["TestGrainEnvelopeShape"], shape_continuous_with_zero_edges),
+    # Ticket 10 (these three fail on the pass-through diffuser).
+    Check("diffuser matches Clouds at 32 kHz, bypassed at amount 0",
+          ["TestDiffuser"], diffuser_matches_clouds),
+    Check("diffuser spreads an impulse without changing its energy",
+          ["TestDiffuser"], diffuser_spreads_energy),
+    Check("diffuser amount follows Shape from Hann up, off in delay mode",
+          ["TestDiffuser"], diffuser_amount_follows_shape),
 ]

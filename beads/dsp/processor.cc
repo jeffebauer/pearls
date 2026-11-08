@@ -68,6 +68,7 @@ void Processor::Init(
   dry_ = 0.0f;
   wet_ = 0.0f;
   
+  diffuser_.Init(48000.0f);
   reverb_.Init(reverb_buffer, 48000.0f);
 #ifdef ENABLE_HARDWARE_24K
   wow_and_flutter_.Init(24000.0f);
@@ -113,6 +114,7 @@ void Processor::Configure(Media media, bool mono) {
   output_limiter_.Init(1.0f / (sr * 6.0f), 0.9f);
   trigger_generator_.Init(sr);
   delay_controller_.Init(sr, max_delay * (mono ? 2 : 1));
+  diffuser_.Reset(sr);
   reverb_.Reset(sr);
 }
 
