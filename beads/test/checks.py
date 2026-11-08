@@ -184,6 +184,21 @@ def shape_continuous_with_zero_edges(m):
         % (max(steps), MAX_SHAPE_STEP, edge, MAX_EDGE_VALUE))
 
 
+# Ticket 10: the level halfway up the diffuser against the mean of Hann (no
+# diffuser) and Gaussian (full diffuser). A linear blend measures 2.3 dB down.
+MAX_DIFFUSER_DIP_DB = 1.0
+
+
+def diffuser_level_flat(m):
+    hann = m["beads_shape_075.wav"]["gated_rms_dbfs"]
+    half = m["beads_shape_088.wav"]["gated_rms_dbfs"]
+    full = m["beads_shape_100.wav"]["gated_rms_dbfs"]
+    diff = half - 0.5 * (hann + full)
+    return abs(diff) <= MAX_DIFFUSER_DIP_DB, (
+        "halfway %+.1f dB against Hann and Gaussian (limit %.1f)"
+        % (diff, MAX_DIFFUSER_DIP_DB))
+
+
 def diffuser_values(m):
     return m["beads_diffuser.wav"].get("values", {})
 
@@ -267,4 +282,7 @@ CHECKS = [
           ["TestDiffuser"], diffuser_spreads_energy),
     Check("diffuser amount follows Shape from Hann up, off in delay mode",
           ["TestDiffuser"], diffuser_amount_follows_shape),
+    # Ticket 10 (fails with Clouds' linear blend: 2.3 dB down).
+    Check("level stays flat halfway up the diffuser",
+          ["TestProcessorShapeSweep"], diffuser_level_flat),
 ]
