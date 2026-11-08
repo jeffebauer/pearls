@@ -34,6 +34,7 @@
 #define BEADS_DSP_FX_DIFFUSER_H_
 
 #include "stmlib/stmlib.h"
+#include "stmlib/dsp/dsp.h"
 
 #include "beads/dsp/frame.h"
 #include "beads/dsp/fx/fx_engine.h"
@@ -48,7 +49,8 @@ class Diffuser {
   void Init(float sample_rate) {
     engine_.Init(buffer_);
     amount_ = 0.0f;
-    target_amount_ = 0.0f;
+    dry_gain_ = 1.0f;
+    wet_gain_ = 0.0f;
     Reset(sample_rate);
   }
 
@@ -65,7 +67,7 @@ class Diffuser {
 
   void Process(FloatFrame* in_out, size_t size) {
     // Costs nothing, and leaves the signal untouched, until it's turned up.
-    if (amount_ == 0.0f && target_amount_ == 0.0f) {
+    if (amount_ == 0.0f && wet_gain_ == 0.0f) {
       return;
     }
 
@@ -87,10 +89,18 @@ class Diffuser {
     E::DelayLine<Memory, 7> apr4;
     E::Context c;
     const float kap = 0.625f;
-    const float increment = (target_amount_ - amount_) / float(size);
-    float amount = amount_;
+    // Equal power: the allpassed copy is decorrelated from its input, so a
+    // linear blend would dip by about 3 dB halfway. At either end this is
+    // the plain signal or the plain diffuser, as in Clouds.
+    const float dry_target = stmlib::Sqrt(1.0f - amount_);
+    const float wet_target = stmlib::Sqrt(amount_);
+    const float dry_increment = (dry_target - dry_gain_) / float(size);
+    const float wet_increment = (wet_target - wet_gain_) / float(size);
+    float dry = dry_gain_;
+    float wet_gain = wet_gain_;
     while (size--) {
-      amount += increment;
+      dry += dry_increment;
+      wet_gain += wet_increment;
       engine_.Start(&c);
 
       float wet = 0.0f;
@@ -104,7 +114,7 @@ class Diffuser {
       c.Read(apl4, offset_[3], kap);
       c.WriteAllPass(apl4, -kap);
       c.Write(wet, 0.0f);
-      in_out->l += amount * (wet - in_out->l);
+      in_out->l = dry * in_out->l + wet_gain * wet;
 
       c.Read(in_out->r);
       c.Read(apr1, offset_[4], kap);
@@ -116,15 +126,16 @@ class Diffuser {
       c.Read(apr4, offset_[7], kap);
       c.WriteAllPass(apr4, -kap);
       c.Write(wet, 0.0f);
-      in_out->r += amount * (wet - in_out->r);
+      in_out->r = dry * in_out->r + wet_gain * wet;
 
       ++in_out;
     }
-    amount_ = target_amount_;
+    dry_gain_ = dry_target;
+    wet_gain_ = wet_target;
   }
 
-  void set_amount(float amount) { target_amount_ = amount; }
-  float amount() const { return target_amount_; }
+  void set_amount(float amount) { amount_ = amount; }
+  float amount() const { return amount_; }
 
  private:
   enum { kNumLines = 8, kBufferSize = 4096 };
@@ -135,7 +146,8 @@ class Diffuser {
   int32_t offset_[kNumLines];
 
   float amount_;
-  float target_amount_;
+  float dry_gain_;
+  float wet_gain_;
 
   DISALLOW_COPY_AND_ASSIGN(Diffuser);
 };
