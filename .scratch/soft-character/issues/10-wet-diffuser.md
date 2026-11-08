@@ -11,11 +11,11 @@ Port `clouds/dsp/fx/diffuser.h` into `beads/dsp/fx/`, on the wet path before the
 
 ## Acceptance
 
-- [x] Delay lines at 48 kHz lengths (L 189/270/404/666, R 227/308/368/608), with `kap` 0.625 and `FxEngine<4096, FORMAT_32_BIT>`
-- [x] Read offsets scaled by sample rate at runtime; in the harness, a 32 kHz render matches Clouds' timing
+- [x] Delay lines at 48 kHz lengths (L 189/270/404/666, R 227/308/368/608), with `FxEngine<4096, FORMAT_32_BIT>`. `kap` changed from 0.625 to 0.5 by ear
+- [x] Read offsets scaled by sample rate at runtime. The port matched Clouds to rounding at 32 kHz (`387f40b`); since the change to `kap` and the modulation, the check is that 32 kHz timing is 2/3 of 48 kHz in samples
 - [ ] RAM checked in the linker map, and CPU measured. RAM done; CPU needs the debug pin
 - [x] MIT licence header kept
-- [ ] Standard gates, plus Jesse's A/B verdict. Gates pass; verdict pending
+- [ ] Standard gates, plus Jesse's A/B verdict. Gates pass; Jesse picked the variant by ear
 
 ## Comments
 
@@ -43,3 +43,9 @@ Cloud patch, 30 s each.
 | 1.00 | Gaussian, no diffuser (ticket 09) | −25.6 | 340 |
 
 The drop to 2 clicks is partly the detector: it looks for sudden frame-to-frame jumps, and the diffuser spreads those over about 30 ms. Don't read it as literal click removal.
+
+**8 November 2026, verdict.** Jesse heard the fixed lines at `kap` 0.625 as metallic. Six variants plus no diffuser were rendered on four sources (`renders/10-diffuser/sources/`: the test source, picked guitar, sustained synth chords, drum groove). Jesse picked `kap` 0.5 with the reverb's slow smear on each channel's first line (0.5 and 0.3 Hz), landed in `c6b7803`. The modulation offsets scale with sample rate, and at 48 kHz the output is byte-identical to the variant Jesse heard.
+
+Ring to −30 dB fell from 128.6 ms to 97.1 ms, and the same impulse 1.25 s later differs by 0.32 where the fixed lines didn't move at all. The Clouds sample-match check is replaced by timing, movement and ring checks. No test measures "metallic" itself; that was by ear. CPU is still to measure and now includes two interpolated reads per sample, so this stays `ready-for-human`.
+
+Final renders on the cloud: Hann −25.3 dB, 379 clicks; halfway −25.5 dB, 204 clicks; Gaussian with full diffuser −25.6 dB, 8 clicks. The table above is from the earlier fixed lines.

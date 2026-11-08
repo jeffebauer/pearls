@@ -20,7 +20,7 @@
     },
     "renders/10-diffuser": {
       "label": "10 · Diffuser",
-      "description": "Clouds' allpass diffuser on the wet bus, faded in with an equal-power blend from Hann (off) to fully clockwise (full). Includes every earlier change. Below Hann these are byte-identical to 09."
+      "description": "The diffuser as picked: kap 0.5 with the first line of each channel slowly modulated, on the wet bus, faded in with an equal-power blend from Hann (off) to fully clockwise (full). Includes every earlier change. Below Hann these are byte-identical to 09."
     },
     "renders/10-diffuser/sweep/control": {
       "label": "10 sweep · kap 0.625 (current)",
