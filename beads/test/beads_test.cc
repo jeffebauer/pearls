@@ -920,23 +920,10 @@ void TestProcessor() {
   }
 }
 
-// One pass of TestProcessor's patch with reverb and feedback off and Density
-// raised to 0.9, a dense random cloud (about 25 grains a second). The wet
-// level depends on density, and a sparse patch measures mostly the gaps
-// between grains. dry_wet 0 gives the dry path alone and 1 the wet path alone.
-// Both mix curves scale by the same factor at 12 o'clock, so the wet/dry level
-// difference measured here is the one heard at 12 o'clock.
-void RenderProcessorPath(const char* filename, float dry_wet,
-                         AttackLogger* logger, float density = 0.9f,
-                         int seconds = 30, float input_gain = 1.0f) {
-  WavWriter wav_writer(2, kSampleRate, seconds);
-  wav_writer.Open(filename);
-  AudioSource audio_source("audio_samples/kettel.wav");
-
-  Processor proc;
-  proc.Init(buffers, reverb_buffer);
-  proc.Configure(Processor::MEDIA_DIGITAL, false);
-
+// The patch the wet renders share. Nothing is randomised, so every grain reads
+// about the same spot at the source pitch and the wet sounds like the source
+// delayed by about 404 ms.
+Parameters FixedWetPatch() {
   Parameters p;
   p.time.base = 0.1f;
   p.time.attenuverter = 0.0f;
@@ -951,6 +938,26 @@ void RenderProcessorPath(const char* filename, float dry_wet,
   p.pitch.attenuverter = 0.0f;
   p.pitch.has_cv = false;
   p.monophonic_mode = false;
+  return p;
+}
+
+// One pass of TestProcessor's patch with reverb and feedback off and Density
+// raised to 0.9, a dense random cloud (about 25 grains a second). The wet
+// level depends on density, and a sparse patch measures mostly the gaps
+// between grains. dry_wet 0 gives the dry path alone and 1 the wet path alone.
+// Both mix curves scale by the same factor at 12 o'clock, so the wet/dry level
+// difference measured here is the one heard at 12 o'clock.
+void RenderProcessorPath(const char* filename, float dry_wet,
+                         AttackLogger* logger, float density = 0.9f,
+                         int seconds = 30, float input_gain = 1.0f,
+                         const Parameters& p = FixedWetPatch()) {
+  WavWriter wav_writer(2, kSampleRate, seconds);
+  wav_writer.Open(filename);
+  AudioSource audio_source("audio_samples/kettel.wav");
+
+  Processor proc;
+  proc.Init(buffers, reverb_buffer);
+  proc.Configure(Processor::MEDIA_DIGITAL, false);
 
   Processor::MixParameters m;
   m.feedback = 0.0f;
@@ -1019,6 +1026,30 @@ void TestProcessorDensitySweep() {
              int(densities[i] * 100.0f + 0.5f));
     RenderProcessorPath(filename, 1.0f, NULL, densities[i], 15);
   }
+}
+
+// The wet path with the 32-grain pool overflowing, so voice stealing runs
+// (ticket 08). Grains last about 1.5 s at Size 0.9 and 3.3 s at Size 0.98,
+// which at about 25 grains a second is roughly 38 and 83 wanting to overlap. At
+// the other renders' Size 0.75 only about 9 overlap and nothing is ever stolen.
+// Size stays at 0.98 at most: above 0.99 the processor switches to delay mode.
+void TestProcessorVoiceSteal() {
+  Parameters p = FixedWetPatch();
+  p.size.base = 0.9f;
+  RenderProcessorPath("beads_steal_s090.wav", 1.0f, NULL, 0.9f, 30, 1.0f, p);
+  p.size.base = 0.98f;
+  RenderProcessorPath("beads_steal_s098.wav", 1.0f, NULL, 0.9f, 30, 1.0f, p);
+}
+
+// A listening patch that sounds granular, unlike FixedWetPatch: fully wet, Time
+// spread over about a second per grain, at the bell of Shape. About 9 grains
+// overlap at Size 0.75 and Density 0.9. Pitch stays fixed: randomising it made
+// the render seasick and hard to judge.
+void TestProcessorCloud() {
+  Parameters p = FixedWetPatch();
+  p.time.attenuverter = 0.25f;
+  p.shape.base = 0.66f;
+  RenderProcessorPath("beads_cloud.wav", 1.0f, NULL, 0.9f, 30, 1.0f, p);
 }
 
 void TestProcessorDelay() {
@@ -2327,6 +2358,8 @@ const NamedTest kTests[] = {
   { "TestProcessorWetDry", &TestProcessorWetDry },
   { "TestProcessorDensitySweep", &TestProcessorDensitySweep },
   { "TestProcessorWetDrive", &TestProcessorWetDrive },
+  { "TestProcessorVoiceSteal", &TestProcessorVoiceSteal },
+  { "TestProcessorCloud", &TestProcessorCloud },
   { "TestProcessorDelay", &TestProcessorDelay },
   { "TestProcessorDelayBW", &TestProcessorDelayBW },
   { "TestProcessorDelayTimeXFade", &TestProcessorDelayTimeXFade },
