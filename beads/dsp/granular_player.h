@@ -47,6 +47,10 @@ const float kPreemptiveCrossfadeTime = 0.1f;
 // Wet bus normalisation (ticket 05, ADR 0004). The bus gain drops at once
 // when grains pile up and recovers with this time constant when they thin out.
 const float kBusGainRecoveryTime = 0.1f;
+// How far the bus gain moves from 1/sum towards 1/sqrt(sum) once Time or Pitch
+// is randomised, and how quickly it gets there as the randomness rises.
+const float kBusGainMaxIncoherence = 0.75f;
+const float kBusGainSpreadScale = 100.0f;
 
 struct Parameters {
   RandomizedParameter time;
@@ -147,8 +151,19 @@ class GranularPlayer {
   // phase (ADR 0004). The floor of 1 leaves a lone grain's fade untouched.
   // The gain follows a rise in the sum at once, so a pile-up never
   // overshoots, and recovers slowly when grains die away.
-  inline float UpdateBusGain(float envelope_sum) {
-    const float target = envelope_sum > 1.0f ? 1.0f / envelope_sum : 1.0f;
+  // Grains scattered in Time or Pitch stop adding up in phase, so their sum
+  // grows nearer sqrt(n) than n and 1/sum would turn them down too far. With no
+  // randomness this is 0 and the bus gain is exactly 1/sum.
+  inline float ComputeBusIncoherence(const Parameters& p) const {
+    const float spread = p.time.randomness_amount() + p.pitch.randomness_amount();
+    return kBusGainMaxIncoherence * std::min(spread * kBusGainSpreadScale, 1.0f);
+  }
+
+  inline float UpdateBusGain(float envelope_sum, float incoherence) {
+    const float target = envelope_sum > 1.0f
+        ? (1.0f - incoherence) / envelope_sum +
+            incoherence / stmlib::Sqrt(envelope_sum)
+        : 1.0f;
     if (target < bus_gain_) {
       bus_gain_ = target;
     } else {

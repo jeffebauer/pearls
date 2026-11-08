@@ -77,7 +77,7 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
       envelope_sum += grain_[i].Render<HEAD_CROSSING_POLICY_STOP, true>(
           delay_line, &wet);
     }
-    const float gain = UpdateBusGain(envelope_sum);
+    const float gain = UpdateBusGain(envelope_sum, ComputeBusIncoherence(p));
     out->l += wet.l * gain;
     out->r += wet.r * gain;
 
