@@ -1,6 +1,6 @@
 # 04: Wet gain matches dry
 
-Status: ready-for-human
+Status: done
 Blocked by: 01
 Type: task
 Spec: `../spec.md`, Spec decision 2
@@ -14,7 +14,7 @@ Set the wet post-gain (`post_gain_wet`, 1.5) in `beads/dsp/processor.cc` to the 
 - [x] The chosen gain and its measured wet − dry are recorded in Comments
 - [x] The check command's "wet and dry within 1 dB at 12 o'clock" assertion goes from failing to passing
 - [x] The measurement tool shows the wet level dropping by about 4 dB against stock, with dry unchanged, and no clipping in the wet render (stock clips 8 samples)
-- [ ] Standard gates, plus Jesse's A/B verdict
+- [x] Standard gates, plus Jesse's A/B verdict
 
 ## Comments
 
@@ -36,4 +36,4 @@ Wet peak is still within 0.4 dB of full scale on the dense patch: the soft satur
 
 Aside: `renders/stock/beads_granular_player.wav` doesn't match a render at `457bc9c` (before this change), so that stock file is stale. It doesn't go through `processor.cc`, so this ticket isn't affected, but re-render stock player and granular-processor before a ticket that changes them. `beads_processor.wav` at `457bc9c` matches stock exactly.
 
-A/B verdict: pending (Jesse).
+A/B verdict, 8 November 2026: Jesse prefers 0.94 ("B sounds good"), heard on the listening page against stock, LUFS level-matched.
