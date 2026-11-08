@@ -928,7 +928,7 @@ void TestProcessor() {
 // difference measured here is the one heard at 12 o'clock.
 void RenderProcessorPath(const char* filename, float dry_wet,
                          AttackLogger* logger, float density = 0.9f,
-                         int seconds = 30) {
+                         int seconds = 30, float input_gain = 1.0f) {
   WavWriter wav_writer(2, kSampleRate, seconds);
   wav_writer.Open(filename);
   AudioSource audio_source("audio_samples/kettel.wav");
@@ -969,6 +969,10 @@ void RenderProcessorPath(const char* filename, float dry_wet,
     FloatFrame frames[kBlockSize];
 
     audio_source.Read(in, kBlockSize);
+    for (size_t j = 0; j < kBlockSize; ++j) {
+      in[j].l *= input_gain;
+      in[j].r *= input_gain;
+    }
 
     fill(&freeze[0], &freeze[kBlockSize], false);
     proc.Process(
@@ -992,6 +996,14 @@ void TestProcessorWetDry() {
   RenderProcessorPath("beads_wetdry_dry.wav", 0.0f, NULL);
   AttackLogger logger("beads_wetdry_wet_attacks.csv");
   RenderProcessorPath("beads_wetdry_wet.wav", 1.0f, &logger);
+}
+
+// The wet path alone with the source 12 dB down and 6 dB up (ticket 06). The
+// quiet pass stays below the wet saturator's threshold, so it should match
+// the code before the saturator. The hot pass drives dense clouds into it.
+void TestProcessorWetDrive() {
+  RenderProcessorPath("beads_drive_quiet.wav", 1.0f, NULL, 0.9f, 30, 0.25f);
+  RenderProcessorPath("beads_drive_hot.wav", 1.0f, NULL, 0.9f, 30, 2.0f);
 }
 
 // The wet path alone across both halves of Density (regular below 0.48,
@@ -2314,6 +2326,7 @@ const NamedTest kTests[] = {
   { "TestProcessor", &TestProcessor },
   { "TestProcessorWetDry", &TestProcessorWetDry },
   { "TestProcessorDensitySweep", &TestProcessorDensitySweep },
+  { "TestProcessorWetDrive", &TestProcessorWetDrive },
   { "TestProcessorDelay", &TestProcessorDelay },
   { "TestProcessorDelayBW", &TestProcessorDelayBW },
   { "TestProcessorDelayTimeXFade", &TestProcessorDelayTimeXFade },

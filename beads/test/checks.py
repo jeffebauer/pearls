@@ -48,6 +48,28 @@ def density_spread_narrower(m):
            STOCK_DENSITY_SPREAD_DB - MIN_SPREAD_GAIN_DB))
 
 
+# TestProcessorWetDrive's quiet pass (source 12 dB down, wet peak -16 dBFS),
+# measured at bcf5e36 before ticket 06. It sits below the wet saturator's
+# threshold, so the saturator mustn't move it.
+STOCK_QUIET_GATED_RMS_DBFS = -37.50
+QUIET_TOLERANCE_DB = 0.1
+
+
+def quiet_wet_unchanged(m):
+    level = m["beads_drive_quiet.wav"]["gated_rms_dbfs"]
+    diff = level - STOCK_QUIET_GATED_RMS_DBFS
+    return abs(diff) <= QUIET_TOLERANCE_DB, (
+        "gated rms %.2f dBFS, %+.2f dB against %.2f before the saturator"
+        % (level, diff, STOCK_QUIET_GATED_RMS_DBFS))
+
+
+def hot_wet_not_clipped(m):
+    clipped = m["beads_drive_hot.wav"]["clipped"]
+    return clipped == 0, (
+        "%d samples clipped with the source 6 dB up, peak %.1f dBFS"
+        % (clipped, m["beads_drive_hot.wav"]["peak_dbfs"]))
+
+
 CHECKS = [
     # Ticket 01 (fails on stock); ticket 04 should make it pass.
     Check("wet and dry within 1 dB at 12 o'clock",
@@ -58,4 +80,10 @@ CHECKS = [
     # Ticket 05 (fails on stock: 14.6 dB).
     Check("wet level spread across a Density sweep narrower than stock",
           ["TestProcessorDensitySweep"], density_spread_narrower),
+    # Ticket 06 guard: passes before and after the saturator, by design.
+    Check("wet below the saturator threshold unchanged within 0.1 dB",
+          ["TestProcessorWetDrive"], quiet_wet_unchanged),
+    # Ticket 06 (fails before the saturator: 7 samples).
+    Check("fully wet render with the source 6 dB up doesn't clip",
+          ["TestProcessorWetDrive"], hot_wet_not_clipped),
 ]
