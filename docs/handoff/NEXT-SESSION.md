@@ -1,67 +1,63 @@
-# Next session: after 8 November 2026 (grilling done, spec and tickets written)
+# Next session: after 8 November 2026 (ticket 01 done, wet gain decided)
 
 ## Where things stand
 
-On `master`. This session added three commits on top of `500be04`:
-- `ad1ed1c`: the plan write-up
-- `37b4619`: the check command added to tickets 01 and 04
-- this handoff
+On `master` at `f785350`, pushed to origin (level, nothing ahead). This handoff is a checkpoint commit on top. **Ticket 01 is done** (`08d345f`): `beads/test/measure.py`, `beads/test/checks.py`, and the `TestProcessorWetDry` harness test. `f785350` records Jesse's decision to set the wet gain from measurement (spec decision 2, ADR 0004, `CLAUDE.md` row 1, tickets 04 and 05). **No DSP changes yet. Nothing flashed. No settings backup exists.**
 
-Whether they're pushed depends on Jesse's answer at this wrap; `/session-start`'s ahead/behind line settles it. **No DSP changes yet. Nothing flashed. No settings backup exists.** All gates are green (see below).
-
-This session:
-- **Grilling is finished.** `/grill-with-docs` ran on the brief. Every decision is recorded in:
-  - `.scratch/soft-character/spec.md`
-  - four ADRs in `docs/adr/` (GCC 15 build, settings sector, Shape sweep, envelope-sum normalisation)
-  - `GLOSSARY.md`
-  - the parked ideas in `.scratch/backlog/parked.md`
-  - the planned-changes table in `CLAUDE.md`, now 13 rows numbered 0–12
-- **15 tickets** are in `.scratch/soft-character/issues/01-…` to `15-…`. Each carries `Status:` and `Blocked by:` lines.
-  - The spec and tickets were written by hand, following the `/to-spec` and `/to-tickets` conventions. Those skills existed but weren't in this session's invocable list.
-  - **Jesse hasn't reviewed the ticket breakdown itself.** `/to-tickets` would normally quiz him on granularity before writing. He approved the plan, not the 15-way split.
-- **Ticket 01 now asks for one pass/fail check command.** Its first assertion (wet and dry within 1 dB at 12 o'clock) fails on stock, and ticket 04 makes it pass. This gives `/tdd` a failing check to start from.
-- **Workflow agreed** (via `/ask-matt`): `/implement` one ticket per fresh session, with `/clear` between. Not `/implement-spec`, because the chain is nearly linear and every DSP ticket waits on Jesse's A/B verdict. Run `/retro` after ticket 01, in that session.
+The upstream push block is done: `git remote -v` shows `upstream DISABLED (push)`.
 
 ## Start here
 
-Run `/implement .scratch/soft-character/issues/01-render-measurement-tool.md`. Every later ticket's acceptance depends on its metrics and its check command, and it needs no hardware. Read `spec.md` decision 1 and ticket 01 first. Then run `/retro` in the same session before clearing. Optionally, glance at the ticket list with Jesse first, since he hasn't reviewed the breakdown (for example, 07 and 08 could merge).
+**Ticket 04**, `.scratch/soft-character/issues/04-wet-gain-matches-dry.md`, done test-first:
+
+1. Run `python3 beads/test/measure.py --check`. It fails at +4.1 dB (wet − dry, gated RMS, dense patch).
+2. Tune `post_gain_wet` (1.5) in `beads/dsp/processor.cc:212` until the check passes. Expect about 0.94, but confirm by rendering, because the limiters sit after the mix.
+3. Record the chosen gain and the measured wet − dry in the ticket's Comments.
+4. Render into `renders/04-wet-gain/`, compare against `renders/stock/metrics.txt`, and ask Jesse for the A/B verdict.
+
+Read the ticket and spec decision 2 first.
 
 ## Waiting on Jesse
 
 - **Settings backup.** Read sector 15 (0x081E0000, 128 KB) with STM32CubeProgrammer into `backups/` (git-ignored), and copy it off this machine. This blocks any flash, and so the CPU measurements in tickets 05, 09 and 10.
-- **Ticket 03, the reference captures.** Play the reference source into the Arbhar and the Multigrain, using each reference patch. Possible once ticket 02 lands.
-- **A/B verdicts** on each DSP ticket (04 onwards), recorded in the ticket's Comments.
-- **Optional:** block pushes to upstream with `git remote set-url --push upstream DISABLED`. Offered twice, not done.
-- **Optional:** install `uv` and a Perplexity key for `/research` (see memory `research-script-broken`).
+- **Ticket 03, the reference captures**, once ticket 02 lands.
+- **A/B verdicts** on each DSP ticket (04 onwards).
+- **The 15-ticket breakdown** is still unreviewed (07 and 08 could merge, for example).
+- **Optional:** `uv` and a Perplexity key for `/research` (memory `research-script-broken`).
 
 ## In flight
 
-Nothing. No delegates, branches or worktrees.
+Nothing. Tree clean, no branches, worktrees or delegates.
 
 ## Will bite
 
-- **The reference source is clip 09 of the Sublustris demos** (picked D chords, CC0 Emily guitar). It's built by `~/Documents/Sites/sublustris-versio/docs/minisite/tools/demos/build_sources.py` from `~/Documents/Sites/resilio-versio/test_audio/demo_sources/cc0/guitar_emily/`. That script writes 48 kHz float WAV, and the harness expects 16-bit, so convert. The `*-dry.mp3` in that repo is lossy, so don't use it.
-- **Stock Shape order** is square → decay → bell (about ⅔ of the travel) → reverse (`grain_envelope.h:59-79`). The new order puts decay before square (ADR 0003).
-- **`kInstantCrossfadeTime` is tied to the scheduler thresholds** (comment at `granular_player.h:41`). Ticket 08 must check that ordering still holds.
-- **Density** is periodic left of noon and random right of noon (`trigger_generator.cc:110, 132-137`). Pan spread is zero unless something is randomised (`granular_player.h:85-126`).
-- **Reading PDFs:** there's no pdftotext or pdftoppm. Use the PDFKit Swift route in memory `module-manuals`, which also lists Jesse's local manual paths. Multigrain v1.4 lists seven discrete shapes, with Tukey as the default.
-- The firmware linker script lets the image run over the settings sector, so always build with `./firmware.sh`, never bare `make` (ADR 0002).
-- `renders/` and `audio_samples/` are git-ignored, so a fresh clone must regenerate both.
+- **`/implement` and `/retro` aren't in this session's skill list.** Ticket 01 was done by hand, and `/retro` never ran. Use `/mattpocock-skills:tdd`, or work from the ticket directly.
+- **The wet level depends on the patch.** The check uses Density 0.9 (about 25 grains a second) and gated RMS, as Jesse chose. A sparse patch measures mostly the gaps between grains: wet − dry went from −16 to +4 dB across the patches tried. See the table in ticket 01's Comments.
+- **The click detector flags `kettel.wav`'s own note onsets** (85 in the dry render). Compare wet click counts with dry and stock, not as absolutes.
+- **Stock fully wet clips 8 samples** on the check patch (peak 0.0 dBFS). Ticket 04's acceptance now asks for no clipping.
+- **The harness writes renders into the repo root.** `measure.py --check` moves them into `renders/check/`. `/beads_*.wav` is git-ignored, and `*.csv` was already ignored.
+- **The attack probe** is a test-only hook in `grain_envelope.h` (`#ifdef TEST`). Ticket 09 rewrites that file, so keep the two probe calls in `Start()` and `Render()`.
+- **The reference source is clip 09 of the Sublustris demos** (picked D chords, CC0 Emily guitar). It's built by `~/Documents/Sites/sublustris-versio/docs/minisite/tools/demos/build_sources.py` from `~/Documents/Sites/resilio-versio/test_audio/demo_sources/cc0/guitar_emily/`. The script writes float WAV, and `AudioSource` in the harness reads raw 16-bit after a 48-byte header, so convert. Don't use the lossy `*-dry.mp3`.
+- **`kInstantCrossfadeTime` is tied to the scheduler thresholds** (`granular_player.h:41`). Ticket 08 must check that ordering still holds.
+- **Density** is periodic left of noon and random right of noon (`trigger_generator.cc:110, 132-137`).
+- **Always build with `./firmware.sh`, never bare `make`.** The linker script lets the image run over the settings sector (ADR 0002).
+- `renders/` and `audio_samples/` are git-ignored, so a fresh clone must regenerate both, including `renders/stock/metrics.txt` (`python3 beads/test/measure.py renders/stock/*.wav`, after rendering stock with `TestProcessorWetDry`).
 
 ## Gates
 
-At `37b4619` (docs-only changes since `526021e`):
-- harness: builds, 0 errors or warnings
-- firmware: image ends at 0x0805ABB0, 1557 KB below the settings sector
-- stock renders, 30 s each, 0 clipped samples:
-  - `beads_processor`: peak −3.2 dBFS, RMS −29.3 dBFS
-  - `beads_granular_player`: peak −5.3, RMS −37.2
-  - `beads_granular_processor`: peak −10.7, RMS −32.3
+At `08d345f`; docs only since.
+
+- Harness: builds with 0 errors or warnings.
+- Firmware: image ends at 0x0805ABB0, 1557 KB below the settings sector (unchanged, so the probe is compiled out).
+- `measure.py --check`: 1 of 1 checks fails (expected): wet − dry gated RMS +4.1 dB.
+- Stock baseline in `renders/stock/metrics.txt`. Highlights:
+  - `beads_processor`: peak −3.2 dBFS, RMS −29.3 dBFS, 0 clipped
+  - wet/dry check patch: wet clips 8 samples; attacks are 0.52 ms on all 748 grains
 
 ## Where to look
 
-- `.scratch/soft-character/spec.md`: the design, in 12 decisions
-- `.scratch/soft-character/issues/01-render-measurement-tool.md`: the next ticket
-- `CLAUDE.md`: the planned-changes table and workflow
-- `GLOSSARY.md` and `docs/adr/`: vocabulary and the decisions not to undo
-- `.claude/session.md`: gates and hazards
+- `.scratch/soft-character/issues/04-wet-gain-matches-dry.md`: the next ticket
+- `.scratch/soft-character/spec.md`: decision 2
+- `.scratch/soft-character/issues/01-render-measurement-tool.md`: Comments, for what the tool does and the density table
+- `beads/test/checks.py`: where ticket 04's assertion already lives
+- `.claude/session.md`: gates, including the check command
