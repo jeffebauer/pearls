@@ -927,8 +927,9 @@ void TestProcessor() {
 // Both mix curves scale by the same factor at 12 o'clock, so the wet/dry level
 // difference measured here is the one heard at 12 o'clock.
 void RenderProcessorPath(const char* filename, float dry_wet,
-                         AttackLogger* logger) {
-  WavWriter wav_writer(2, kSampleRate, 30);
+                         AttackLogger* logger, float density = 0.9f,
+                         int seconds = 30) {
+  WavWriter wav_writer(2, kSampleRate, seconds);
   wav_writer.Open(filename);
   AudioSource audio_source("audio_samples/kettel.wav");
 
@@ -958,11 +959,11 @@ void RenderProcessorPath(const char* filename, float dry_wet,
   m.output_gate = false;
 
   ModulatedParameter d;
-  d.base = 0.9f;
+  d.base = density;
   d.cv = 0.0f;
 
   grain_envelope_probe = logger;
-  for (size_t i = 0; i < kSampleRate * 30; i += kBlockSize) {
+  for (size_t i = 0; i < kSampleRate * seconds; i += kBlockSize) {
     FloatFrame in[kBlockSize];
     bool freeze[kBlockSize];
     FloatFrame frames[kBlockSize];
@@ -991,6 +992,21 @@ void TestProcessorWetDry() {
   RenderProcessorPath("beads_wetdry_dry.wav", 0.0f, NULL);
   AttackLogger logger("beads_wetdry_wet_attacks.csv");
   RenderProcessorPath("beads_wetdry_wet.wav", 1.0f, &logger);
+}
+
+// The wet path alone across both halves of Density (regular below 0.48,
+// random above 0.52), 15 s each. How far the levels spread shows how well
+// the wet bus is normalised against overlap (ticket 05).
+void TestProcessorDensitySweep() {
+  const float densities[] = {
+    0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f
+  };
+  for (size_t i = 0; i < sizeof(densities) / sizeof(densities[0]); ++i) {
+    char filename[64];
+    snprintf(filename, sizeof(filename), "beads_density_%03d.wav",
+             int(densities[i] * 100.0f + 0.5f));
+    RenderProcessorPath(filename, 1.0f, NULL, densities[i], 15);
+  }
 }
 
 void TestProcessorDelay() {
@@ -2297,6 +2313,7 @@ const NamedTest kTests[] = {
   { "TestGranularProcessor", &TestGranularProcessor },
   { "TestProcessor", &TestProcessor },
   { "TestProcessorWetDry", &TestProcessorWetDry },
+  { "TestProcessorDensitySweep", &TestProcessorDensitySweep },
   { "TestProcessorDelay", &TestProcessorDelay },
   { "TestProcessorDelayBW", &TestProcessorDelayBW },
   { "TestProcessorDelayTimeXFade", &TestProcessorDelayTimeXFade },
