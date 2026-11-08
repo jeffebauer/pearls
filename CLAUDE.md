@@ -28,18 +28,12 @@ Settled by grilling on 8 November 2026. The spec and one ticket per row are in `
 | # | Change | Where |
 | --- | --- | --- |
 | 0 | Measurement setup: a render tool (wet vs dry level, click detector on 1 ms frames, grain attack time), guitar clip 09 as the reference source, reference patches, and Arbhar and Multigrain reference captures | `beads/test/`, `docs/reference-patches.md`, `renders/reference/` |
-| 1 | Done in `d4381c0`: wet gain from 1.5 to a measured 0.94, so a dense cloud at 12 o'clock is within 1 dB of the dry | `beads/dsp/processor.cc`, dry/wet balance |
-| 2 | Done in `bcf5e36` (CPU on the debug pin still to measure): envelope-sum wet normalisation: bus gain 1/max(Σenv, 1), dropping at once and recovering slowly, replacing per-grain 1/√n at birth (ADR 0004, amended to linear). `3d03f0d` blends the gain towards 1/√Σ when Time or Pitch is randomised, so a granular cloud matches the dry (ticket 16) | `beads/dsp/granular_player.h` |
-| 3 | Done in `a081d46`: soft saturator on the wet bus, linear to −6 dBFS then a tanh knee to 0 dBFS on the bus; the stock pre-reverb limiter stays | `beads/dsp/processor.cc` |
-| 4 | Done in `7a18a0f`: minimum grain attack from 0.5 ms to 3 ms, chosen from a render sweep | `beads/dsp/grain_envelope.h`, `min_attack_` |
-| 5 | Closed with no change: voice-stealing fade stays at 5 ms. A 5 to 20 ms sweep left click counts flat and was inaudible | `beads/dsp/granular_player.h`, `kInstantCrossfadeTime` |
-| 6 | Done in `9836485` (CPU on the debug pin still to measure): Shape sweep as one continuous morph: decay, square, Tukey, Hann, Gaussian, at the knob's quarters. Reverse dropped (ADR 0003) | `beads/dsp/grain_envelope.h`, `lut_gaussian` in `beads/resources.cc` |
-| 7 | Done in `c6b7803` (CPU on the debug pin still to measure): Clouds' diffuser on the wet path, before the saturator and the mix, fading in equal-power from Hann to fully clockwise, off in delay mode. Lines sized for 48 kHz, read at runtime offsets scaled by sample rate. `kap` 0.5 and the first line of each channel modulated, chosen by ear because 0.625 with fixed lines rang metallic | `beads/dsp/fx/diffuser.h`, `beads/dsp/processor.cc` |
-| 8 | Done in `63ae170` (CPU on the debug pin still to measure): random per-grain level, driven by Density's random half, spread over 6 dB with make-up gain holding the average | `beads/dsp/granular_player.h`, `beads/dsp/trigger_generator.cc` |
 | 9 | Density sets overlap rather than grains per second when no clock is patched; clocked behaviour stays stock | `beads/dsp/trigger_generator.cc`, `beads/dsp/granular_processor.h` |
 | 10 | Stereo width: a ±30% pan floor on the wet path plus opposite-polarity random level on L and R; mono stays mono | `beads/dsp/granular_player.h` |
 | 11 | Freeze seam: measure first, and add a crossfade only if the click detector finds a click | `beads/dsp/delay_line.h` |
 | 12 | Pitch quantiser with scale masks: off, chromatic, major, minor, pentatonic, fifths and octaves, octaves. Relative to source pitch. Quantise knob plus CV plus random, once per grain, with hysteresis. Select by holding Quality and turning Pitch. Gets its own short grilling first | `beads/cv_reader.h` (`LAW_DETUNE` table), `beads/dsp/randomized_parameter.h` (`pitch_value()`), speed calc in `beads/dsp/granular_processor.h`, `beads/ui.cc` |
+
+Rows 1–8 are done: see `git log` and the tickets in `.scratch/soft-character/issues/`. CPU on the debug pin is still to measure for 2, 6, 7 and 8.
 
 Measure CPU (debug pin in `beads/drivers/debug_pin.h`) before adding anything per-grain.
 
