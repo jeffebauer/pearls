@@ -15,7 +15,7 @@ Remap Shape in `beads/dsp/grain_envelope.h` to one continuous morph: decay, squa
 - [ ] The Gaussian is computed cheaply (a lookup table if needed), with CPU measured. Table done; CPU needs the debug pin
 - [x] Windows reach zero at both edges, with no DC step
 - [x] Renders at five Shape positions, with the measurement tool run against stock
-- [ ] Standard gates, plus Jesse's A/B verdict. Gates pass; verdict pending
+- [x] Standard gates, plus Jesse's A/B verdict
 
 ## Comments
 
@@ -39,4 +39,6 @@ Stock's levels include its 1.5 wet gain, so read the shape of the column, not th
 
 Test patches that compare against stock moved to the position with the same window (0.33 to 0.0025, 0.3 to 0.025), and renders on those differ from `renders/16-wet-level/` by at most 1 LSB on 2 to 93 samples, so the quiet guard didn't need re-baselining. The cloud moved from 0.66 to 0.75 (Hann). `TestGranularProcessor` stays at 0.5: stock's window there (mostly decay, with a long attack) doesn't exist on the new knob, so its figures no longer compare with stock.
 
-Knob feel not yet heard: stock's 12 o'clock was near decay and is now Tukey.
+Knob feel on hardware not yet heard: stock's 12 o'clock was near decay and is now Tukey.
+
+**8 November 2026, verdict.** Jesse kept it after the A/B on the listening page, so the Gaussian stays at sigma 0.3. CPU on the debug pin is still to measure, so this stays `ready-for-human` until then.

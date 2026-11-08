@@ -33,7 +33,7 @@ Settled by grilling on 8 November 2026. The spec and one ticket per row are in `
 | 3 | Done in `a081d46`: soft saturator on the wet bus, linear to −6 dBFS then a tanh knee to 0 dBFS on the bus; the stock pre-reverb limiter stays | `beads/dsp/processor.cc` |
 | 4 | Done in `7a18a0f`: minimum grain attack from 0.5 ms to 3 ms, chosen from a render sweep | `beads/dsp/grain_envelope.h`, `min_attack_` |
 | 5 | Closed with no change: voice-stealing fade stays at 5 ms. A 5 to 20 ms sweep left click counts flat and was inaudible | `beads/dsp/granular_player.h`, `kInstantCrossfadeTime` |
-| 6 | Shape sweep as one continuous morph: decay, square, Tukey, Hann, Gaussian. Reverse dropped (ADR 0003) | `beads/dsp/grain_envelope.h` |
+| 6 | Done in `9836485` (CPU on the debug pin still to measure): Shape sweep as one continuous morph: decay, square, Tukey, Hann, Gaussian, at the knob's quarters. Reverse dropped (ADR 0003) | `beads/dsp/grain_envelope.h`, `lut_gaussian` in `beads/resources.cc` |
 | 7 | Clouds' diffuser on the wet path, before the mix, fading in from Hann to fully clockwise. Lines sized for 48 kHz, read at runtime offsets scaled by sample rate | `clouds/dsp/fx/diffuser.h` into `beads/dsp/fx/` |
 | 8 | Random per-grain level, driven by Density's random half, downward only to −6 dB | `beads/dsp/granular_player.h` |
 | 9 | Density sets overlap rather than grains per second when no clock is patched; clocked behaviour stays stock | `beads/dsp/trigger_generator.cc`, `beads/dsp/granular_processor.h` |
