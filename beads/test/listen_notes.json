@@ -18,6 +18,10 @@
       "label": "09 · Shape morph",
       "description": "Shape remapped to one continuous morph: decay, square, Tukey, Hann, Gaussian. Reverse is gone. Includes every earlier change. beads_cloud is at Hann."
     },
+    "renders/10-diffuser": {
+      "label": "10 · Diffuser",
+      "description": "Clouds' allpass diffuser on the wet bus, faded in with an equal-power blend from Hann (off) to fully clockwise (full). Includes every earlier change. Below Hann these are byte-identical to 09."
+    },
     "renders/04-wet-gain": {
       "label": "04 · Wet gain 0.94",
       "description": "Wet gain lowered from 1.5 to 0.94, so a dense cloud at 12 o'clock sits within 1 dB of the dry."
@@ -161,6 +165,7 @@
     "beads_shape_025.wav": "Cloud patch, Shape 9 o'clock. 09: square. Stock: on the way to decay.",
     "beads_shape_050.wav": "Cloud patch, Shape 12 o'clock. 09: Tukey. Stock: just past decay.",
     "beads_shape_075.wav": "Cloud patch, Shape 3 o'clock. 09: Hann. Stock: just past the bell.",
-    "beads_shape_100.wav": "Cloud patch, Shape fully clockwise. 09: Gaussian. Stock: reverse."
+    "beads_shape_088.wav": "Cloud patch, Shape halfway from 3 o'clock to fully clockwise. 10: half Hann-to-Gaussian, half diffuser.",
+    "beads_shape_100.wav": "Cloud patch, Shape fully clockwise. 09: Gaussian. 10: Gaussian with the full diffuser. Stock: reverse."
   }
 }
