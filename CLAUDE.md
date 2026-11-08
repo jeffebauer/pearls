@@ -23,15 +23,23 @@ Commit one change per commit so each can be reverted and A/B tested in isolation
 
 ## Planned changes, in order
 
+Settled by grilling on 8 November 2026. The spec and one ticket per row are in `.scratch/soft-character/`. Decisions with lasting weight are in `docs/adr/`, and parked ideas are in `.scratch/backlog/parked.md`.
+
 | # | Change | Where |
 | --- | --- | --- |
-| 1 | Fix wet gain: wet is 1.5, dry 0.75, so wet sits about 6 dB hot | `beads/dsp/processor.cc`, dry/wet balance |
-| 2 | Raise minimum grain attack (currently 0.5 ms) | `beads/dsp/grain_envelope.h`, `min_attack_` |
-| 3 | Lengthen voice-stealing fade (currently 5 ms) | `beads/dsp/granular_player.h`, `kInstantCrossfadeTime` |
-| 4 | Pitch quantiser with scale masks: off, chromatic, major, minor, pentatonic, fifths and octaves, octaves. Relative to source pitch. Quantise knob plus CV plus random, once per grain, with hysteresis. Select by holding Quality and turning Pitch | `beads/cv_reader.h` (`LAW_DETUNE` table), `beads/dsp/randomized_parameter.h` (`pitch_value()`), speed calc in `beads/dsp/granular_processor.h`, `beads/ui.cc` |
-| 5 | Port Clouds' diffuser onto the wet grain path, before the mix; fold into the soft end of the Shape knob. Scale delay lengths for 48 kHz | `clouds/dsp/fx/diffuser.h` into `beads/dsp/fx/` |
-| 6 | Envelope-sum wet normalisation instead of per-grain 1/√n at birth | `beads/dsp/granular_player.h` |
-| 7 | Optional: grain-only reverb (reverb currently runs after the dry/wet mix) | `beads/dsp/processor.cc` |
+| 0 | Measurement setup: a render tool (wet vs dry level, click detector on 1 ms frames, grain attack time), guitar clip 09 as the reference source, reference patches, and Arbhar and Multigrain reference captures | `beads/test/`, `docs/reference-patches.md`, `renders/reference/` |
+| 1 | Wet gain from 1.5 to 0.75, matching dry, so 12 o'clock is an even blend | `beads/dsp/processor.cc`, dry/wet balance |
+| 2 | Envelope-sum wet normalisation: bus gain 1/√(max(Σenv², 1)), falling fast and recovering slowly, replacing per-grain 1/√n at birth (ADR 0004) | `beads/dsp/granular_player.h` |
+| 3 | Soft saturator on the wet bus (tanh-style, from about −6 dBFS); the stock pre-reverb limiter stays | `beads/dsp/processor.cc` |
+| 4 | Raise minimum grain attack (currently 0.5 ms); value chosen from a render sweep | `beads/dsp/grain_envelope.h`, `min_attack_` |
+| 5 | Lengthen voice-stealing fade (currently 5 ms); value chosen from a render sweep | `beads/dsp/granular_player.h`, `kInstantCrossfadeTime` |
+| 6 | Shape sweep as one continuous morph: decay, square, Tukey, Hann, Gaussian. Reverse dropped (ADR 0003) | `beads/dsp/grain_envelope.h` |
+| 7 | Clouds' diffuser on the wet path, before the mix, fading in from Hann to fully clockwise. Lines sized for 48 kHz, read at runtime offsets scaled by sample rate | `clouds/dsp/fx/diffuser.h` into `beads/dsp/fx/` |
+| 8 | Random per-grain level, driven by Density's random half, downward only to −6 dB | `beads/dsp/granular_player.h` |
+| 9 | Density sets overlap rather than grains per second when no clock is patched; clocked behaviour stays stock | `beads/dsp/trigger_generator.cc`, `beads/dsp/granular_processor.h` |
+| 10 | Stereo width: a ±30% pan floor on the wet path plus opposite-polarity random level on L and R; mono stays mono | `beads/dsp/granular_player.h` |
+| 11 | Freeze seam: measure first, and add a crossfade only if the click detector finds a click | `beads/dsp/delay_line.h` |
+| 12 | Pitch quantiser with scale masks: off, chromatic, major, minor, pentatonic, fifths and octaves, octaves. Relative to source pitch. Quantise knob plus CV plus random, once per grain, with hysteresis. Select by holding Quality and turning Pitch. Gets its own short grilling first | `beads/cv_reader.h` (`LAW_DETUNE` table), `beads/dsp/randomized_parameter.h` (`pitch_value()`), speed calc in `beads/dsp/granular_processor.h`, `beads/ui.cc` |
 
 Measure CPU (debug pin in `beads/drivers/debug_pin.h`) before adding anything per-grain.
 
