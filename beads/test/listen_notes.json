@@ -1,5 +1,5 @@
 {
-  "_about": "Names and descriptions for the listening page (beads/test/listen.py). 'folders' says which version of the firmware a folder holds; 'renders' says what each harness render is. Keys are repo-relative folder paths and WAV file names. A folder without an entry shows its path.",
+  "_about": "Names and descriptions for the listening page (beads/test/listen.py). 'folders' says which version of the firmware a folder holds; 'renders' says what each harness render is. Keys are repo-relative folder paths and WAV file names. A render's value is text, or {label, about} to give options that share a folder their own titles. A folder without an entry shows its path.",
 
   "folders": {
     "audio_samples": {
@@ -52,19 +52,19 @@
     },
     "renders/10-diffuser/sources/kettel": {
       "label": "10 variants · Test source",
-      "description": "The diffuser variants at Shape fully clockwise on the usual synthetic test source."
+      "description": "The diffuser variants at Shape fully clockwise on the usual synthetic test source: plucks, a pad and sparse hits."
     },
     "renders/10-diffuser/sources/guitar": {
       "label": "10 variants · Guitar",
-      "description": "The diffuser variants at Shape fully clockwise on the picked guitar."
+      "description": "The diffuser variants at Shape fully clockwise on picked guitar chords. Bright, with long ringing tails: listen to the tails."
     },
     "renders/10-diffuser/sources/synth": {
       "label": "10 variants · Synth chords",
-      "description": "The diffuser variants at Shape fully clockwise on sustained poly synth chords. Ring should show most here."
+      "description": "The diffuser variants at Shape fully clockwise on sustained poly synth chords. Held pitches show ring most clearly: start here."
     },
     "renders/10-diffuser/sources/groove": {
       "label": "10 variants · Drum groove",
-      "description": "The diffuser variants at Shape fully clockwise on a drum groove with stabs."
+      "description": "The diffuser variants at Shape fully clockwise on a drum groove with stabs. Broadband and transient: listen for how much the hits soften."
     },
     "renders/04-wet-gain": {
       "label": "04 · Wet gain 0.94",
@@ -212,13 +212,13 @@
     "guitar.wav": "Picked guitar chords in D, dry.",
     "synth.wav": "Sustained poly synth chords, dry.",
     "groove.wav": "Drum groove with stabs, dry.",
-    "nodiffuser.wav": "Gaussian at fully clockwise with no diffuser, the reference.",
-    "control.wav": "Diffuser at kap 0.625, fixed lines (what was heard as metallic).",
-    "kap050.wav": "Diffuser at kap 0.5, fixed lines.",
-    "kap040.wav": "Diffuser at kap 0.4, fixed lines.",
-    "kap030.wav": "Diffuser at kap 0.3, fixed lines.",
-    "smear.wav": "Diffuser at kap 0.625, first line of each channel slowly modulated.",
-    "smear_kap050.wav": "Diffuser at kap 0.5, first line of each channel slowly modulated.",
+    "nodiffuser.wav": {"label": "No diffuser (reference)", "about": "Plain Gaussian grains, nothing added. Use it to hear what each diffuser brings and what it costs."},
+    "control.wav": {"label": "Fixed lines, kap 0.625 (the metallic one)", "about": "What you flagged. Longest ring of the fixed versions. Listen for the pitched, tinny tail on held notes, then compare the others against it."},
+    "kap050.wav": {"label": "Fixed lines, kap 0.5", "about": "Same delays, shorter ring. Listen for whether the tinny tail gets shorter but keeps the same colour."},
+    "kap040.wav": {"label": "Fixed lines, kap 0.4", "about": "Ring about half as long as 0.625. Listen for grain edges starting to come back: is it still soft?"},
+    "kap030.wav": {"label": "Fixed lines, kap 0.3", "about": "Shortest ring, least smear, closest to no diffuser. Listen for whether it's still doing enough to be worth having."},
+    "smear.wav": {"label": "Modulated, kap 0.625", "about": "Full smear, but the first delay drifts slowly so no fixed pitch can build. Listen for the tinny tail going, and for any chorus or wobble it adds."},
+    "smear_kap050.wav": {"label": "Modulated, kap 0.5", "about": "Shorter ring plus the drift. Listen for whether it's the cleanest, and whether it has lost depth against the 0.625 version."},
     "beads_shape_088.wav": "Cloud patch, Shape halfway from 3 o'clock to fully clockwise. 10: half Hann-to-Gaussian, half diffuser.",
     "beads_shape_100.wav": "Cloud patch, Shape fully clockwise. 09: Gaussian. 10: Gaussian with the full diffuser. Stock: reverse."
   }

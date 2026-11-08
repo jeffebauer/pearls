@@ -342,13 +342,26 @@ async function loadOption(o) {
 function labelFor(path) {
   const f = files.find((w) => w.path === path);
   const group = f ? f.group.replace(/^renders\//, "") : path;
+  // A render's note is text, or {label, about} when options in one folder need
+  // their own titles.
+  const note = f && f.about;
+  const ownTitle = !!note && typeof note === "object";
   return {
     group,
     name: f ? f.name : path.split("/").pop(),
-    label: (f && f.label) || group,
-    description: (f && f.description) || "",
-    about: (f && f.about) || "",
+    label: (ownTitle && note.label) || (f && f.label) || group,
+    description: (!ownTitle && f && f.description) || "",
+    about: ownTitle ? note.about : note || "",
+    ownTitle,
+    folderDescription: (f && f.description) || "",
   };
+}
+
+// With per-render titles, the folder's description goes above the options once.
+function sharedFolderDescription() {
+  if (!options.every((o) => o.ownTitle)) return null;
+  const all = [...new Set(options.map((o) => o.folderDescription))];
+  return all.length === 1 && all[0] ? all[0] : null;
 }
 
 // What the renders are: said once above the options when they all share it,
@@ -414,7 +427,8 @@ function render() {
   const shared = sharedAbout();
   const about = $("about");
   about.textContent = "";
-  if (shared) { const b = document.createElement("b"); b.textContent = "What you're hearing: "; about.append(b, shared); }
+  const heading = shared || sharedFolderDescription();
+  if (heading) { const b = document.createElement("b"); b.textContent = "What you're hearing: "; about.append(b, heading); }
   slotOrder().forEach((i, slot) => {
     const o = options[i];
     const row = document.createElement("div");
@@ -432,8 +446,9 @@ function render() {
       '<div class="trim"><label>trim</label><input type="number" step="0.5" min="-24" max="12" value="' + o.trim + '"></div>' +
       '<button class="x" title="Remove">×</button>';
     row.querySelector("b").textContent = title;
-    row.querySelector(".desc").textContent =
-      shared === null && o.about ? o.description + (o.description ? " " : "") + "Render: " + o.about : o.description;
+    row.querySelector(".desc").textContent = o.ownTitle
+      ? (shared === null ? o.about : "")
+      : shared === null && o.about ? o.description + (o.description ? " " : "") + "Render: " + o.about : o.description;
     row.querySelector("small").textContent = o.path;
     row.addEventListener("click", (e) => { if (!e.target.closest("input,button")) select(i); });
     const inp = row.querySelector("input");
