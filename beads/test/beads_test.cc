@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <map>
 #include <string>
 #include <vector>
@@ -67,7 +68,10 @@ class AudioSource {
     phase_ = 0.0;
 
     if (filename.length() != 0) {
-      fp_ = fopen(filename.c_str(), "rb");
+      // BEADS_TEST_SOURCE swaps in another 48 kHz stereo 16-bit WAV, to hear
+      // a render on different material. Unset, every test uses its usual file.
+      const char* override_path = getenv("BEADS_TEST_SOURCE");
+      fp_ = fopen(override_path ? override_path : filename.c_str(), "rb");
       fseek(fp_, 48, SEEK_SET);
     }
   }
