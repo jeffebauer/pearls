@@ -70,6 +70,33 @@ def hot_wet_not_clipped(m):
         % (clipped, m["beads_drive_hot.wav"]["peak_dbfs"]))
 
 
+# Shortest 10-90% grain rise in the fully wet render. It's 0.52 ms with the
+# stock 0.5 ms floor at this patch's Shape, and 1.04 ms with a 1 ms floor.
+MIN_ATTACK_RISE_MS = 1.0
+
+
+def min_attack_raised(m):
+    attacks = m["beads_wetdry_wet.wav"].get("attacks_ms")
+    if not attacks:
+        return False, "no grain attacks logged"
+    shortest = min(attacks)
+    return shortest >= MIN_ATTACK_RISE_MS, (
+        "shortest grain rise %.2f ms, needs %.2f or more"
+        % (shortest, MIN_ATTACK_RISE_MS))
+
+
+# TestGranularPlayer on stock (renders/stock/metrics.txt). Shape 0.33 and short
+# grains put it on the attack floor, and ticket 05 raised it to 412.
+STOCK_PLAYER_CLICKS = 395
+
+
+def player_clicks_back_to_stock(m):
+    n = len(m["beads_granular_player.wav"]["clicks"])
+    return n <= STOCK_PLAYER_CLICKS, (
+        "%d clicks in the granular player render, stock %d"
+        % (n, STOCK_PLAYER_CLICKS))
+
+
 CHECKS = [
     # Ticket 01 (fails on stock); ticket 04 should make it pass.
     Check("wet and dry within 1 dB at 12 o'clock",
@@ -86,4 +113,10 @@ CHECKS = [
     # Ticket 06 (fails before the saturator: 7 samples).
     Check("fully wet render with the source 6 dB up doesn't clip",
           ["TestProcessorWetDrive"], hot_wet_not_clipped),
+    # Ticket 07 (fails before the change: 0.52 ms).
+    Check("shortest grain rise at least 1 ms",
+          ["TestProcessorWetDry"], min_attack_raised),
+    # Ticket 07 (fails before the change: 412 clicks).
+    Check("granular player clicks no worse than stock",
+          ["TestGranularPlayer"], player_clicks_back_to_stock),
 ]
