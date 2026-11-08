@@ -18,8 +18,16 @@ def wet_dry_within_1db(m):
     return abs(wet - dry) <= 1.0, "wet - dry gated rms %+.1f dB" % (wet - dry)
 
 
+def wet_not_clipped(m):
+    clipped = m["beads_wetdry_wet.wav"]["clipped"]
+    return clipped == 0, "%d samples clipped in the fully wet render" % clipped
+
+
 CHECKS = [
     # Ticket 01 (fails on stock); ticket 04 should make it pass.
     Check("wet and dry within 1 dB at 12 o'clock",
           ["TestProcessorWetDry"], wet_dry_within_1db),
+    # Ticket 04 (fails on stock: 8 samples).
+    Check("fully wet render doesn't clip",
+          ["TestProcessorWetDry"], wet_not_clipped),
 ]

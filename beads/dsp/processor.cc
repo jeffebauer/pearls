@@ -209,7 +209,7 @@ void Processor::Process(
   
   // Dry/wet balance.
   const float post_gain_dry = 0.75f;
-  const float post_gain_wet = 1.5f;
+  const float post_gain_wet = 0.94f;
   const float dry_wet = mix_parameters.dry_wet;
   const float dry = (1.0f - dry_wet) * (1.0f + dry_wet) * post_gain_dry;
   const float wet = dry_wet * (2.0f - dry_wet) * post_gain_wet * wet_fade;
