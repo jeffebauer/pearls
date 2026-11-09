@@ -1,35 +1,34 @@
-# Next session: after 8 November 2026 (ticket 11 kept, 12 next)
+# Next session: after 9 November 2026 (ticket 12 binned, 13 next)
 
 ## Where things stand
 
-On `master` at `0eee5e3`, with this handoff as a commit on top. **Committed:** ticket 11 (`63ae170`, verdict in `5e102e0`). **Pushed:** everything, through this handoff, so origin has all the work after `6f6880d`. **Flashed:** nothing. **No settings backup exists.** Ticket 11: each grain gets a random level at birth, spread over 6 dB across Density's random half, with make-up gain holding the average. Jesse kept it after the A/B on four sources. Tickets 05, 09, 10, 11 and 16 still need CPU measured, and ticket 10 is the heaviest.
+On `master` at `d825235`, with this handoff as a commit on top. **Committed:** ticket 11 (`63ae170`, verdict in `5e102e0`). The code is unchanged since `0eee5e3`. **Pushed:** through `e26d1a7`. `d825235` and this handoff aren't pushed. **Flashed:** nothing. **Ticket 12 (Density as overlap)** was built, A/B'd and binned on 9 November, and none of its code was committed. **No settings backup exists.** Ticket 11: each grain gets a random level at birth, spread over 6 dB across Density's random half, with make-up gain holding the average. Jesse kept it after the A/B on four sources. Tickets 05, 09, 10, 11 and 16 still need CPU measured, and ticket 10 is the heaviest.
 
 ## Start here
 
-**Ticket 12**, `.scratch/soft-character/issues/12-density-as-overlap.md` (`CLAUDE.md` row 9): with no clock patched, Density sets average overlap (grains per grain length) rather than grains per second, so changing Size keeps the cloud equally dense. Clocked behaviour stays stock. It's next in the planned order and desktop-only, so the missing backup doesn't block it.
-
-- Add the check to `beads/test/checks.py` first and see it fail: measured overlap roughly constant as Size changes at a fixed Density. "Clocked stays stock" can't fail first, so pair it.
-- Unsure, decide before writing it: `TriggerGenerator::Render` doesn't receive Size or the grain duration today, so the overlap mapping needs one of them passed in. Randomised Size also makes "grain length" a moving target.
-- Unsure: the wet level gates all render at Density 0.9 and Size 0.75. Remapping Density will move how many grains overlap there, so those patches may need new positions to keep meaning what they did. Work that out before reading a failure as a regression.
-- `level_spread` (ticket 11) is computed from the Density knob in the same function. Keep it keyed to the knob, not to the new rate.
+**Ticket 13**, `.scratch/soft-character/issues/13-stereo-width.md` (`CLAUDE.md` row 10): a ±30% pan floor on the wet path plus opposite-polarity random level on L and R. Mono stays mono. Ticket 12 (Density as overlap, row 9) was built and binned after the A/B on 9 November: Density stays grains per second, and the code wasn't kept. Details are in that ticket's comments.
 
 ## Waiting on Jesse
 
 - **Settings backup.** Read sector 15 (0x081E0000, 128 KB) with STM32CubeProgrammer into `backups/` (git-ignored), and copy it off this machine. It blocks any flash, and so the CPU measurements in tickets 05, 09, 10, 11 and 16.
 - **Ticket 03, the reference captures**, once ticket 02 (`ready-for-agent`, not started) lands.
-- **A/B verdicts** on each DSP ticket from 12 on.
+- **A/B verdicts** on each DSP ticket from 13 on.
+- **Why ticket 12 was binned.** No reason is recorded. It goes in that ticket's comments, so nobody retries the same mapping.
 - **The ticket breakdown** is still unreviewed (16 tickets).
 - **Optional:** `uv` and a Perplexity key for `/research` (memory `research-script-broken`).
 
 ## In flight
 
-Nothing is half-built. The tree is clean apart from this handoff. No branches other than `master`, and no extra worktrees. The `listen` page is serving on 127.0.0.1:8765; stopping it is harmless.
+Nothing is half-built. Three files recording the ticket 12 verdict are uncommitted, waiting for Jesse's go-ahead: `.scratch/soft-character/issues/12-density-as-overlap.md` (`wontfix`, with the approach and measurements), `.scratch/soft-character/issues/13-stereo-width.md` (no longer blocked by 12) and `CLAUDE.md` (row 9 marked binned). No branches other than `master`, and no extra worktrees. The `listen` page isn't running. 8765 and 8766 were held by other servers on 9 November, one a plain file server from `sublustris-versio`, and `preview_start` moves to a free port, so use the port it reports.
 
 ## Will bite
 
+- **A 200 on the listening port doesn't prove it's the listening page.** On 9 November 8765 was another project's file server, and it answered `/` with 200. Check `/api/renders`, which only `listen.py` serves.
+- **A new render named `beads_density_*` joins the Density sweep check.** `density_spread_narrower` picks up that whole prefix, and a stale file in `renders/check/` keeps counting until it's deleted.
+- **`TriggerGenerator::Render` has two production callers,** `beads/dsp/processor.cc` and `beads/dsp/synth.cc`. The test harness builds both.
 - **CPU is the unmeasured risk.** Past 3 o'clock on Shape the diffuser adds eight allpasses and two interpolated reads per sample on top of up to 32 grains. Below Hann it's skipped entirely. Ticket 11 went ahead without a CPU figure, which `CLAUDE.md` asks for, because it adds only a random draw and a little arithmetic per grain.
 - **"Downward only" is gone.** Make-up gain means grains run from 0.667 to 1.333 of their level without the feature at full depth, so the loudest is +2.5 dB. Cloud RMS matches the commit before within 0.4 dB, but peaks rose 0.4 to 2.3 dB. Keeping the level out of the envelope sum is deliberate: inside it, the bus gain cancels the variation.
-- **The random level also applies on the right half of Density with a clock patched**, where that half is probability. Spec row 9's "clocked stays stock" is about overlap; ticket 12's clocked diff against stock will now show this level, so compare against the commit before, or account for it.
+- **The random level also applies on the right half of Density with a clock patched**, where that half is probability. A clocked diff against stock will show this level, so compare against the commit before.
 - **`quiet_wet_unchanged` sits at +0.08 dB against a ±0.1 limit.** It compares against a fixed −37.35 dBFS (the constant is still called `STOCK_…`, though it isn't stock). If it fails, confirm the cause, then re-baseline it. Don't loosen the tolerance.
 - **Only Density 0 to 0.4 still renders byte-identically to before ticket 11.** The random draw shifts the sequence on the random half, so grain-for-grain comparison across that commit means nothing. The granular player's click count moved 307 to 336 between runs of near-identical code for this reason. Treat click counts as approximate.
 - **Listening sweeps for settled tickets are deleted** (8 November, 388 WAVs). Ticket comments still mention them. Only each ticket folder's top level survives, and `renders/11-random-grain-level/` is the current "before". The session prune step now removes these as they settle; see `.claude/session.md`.
@@ -69,7 +68,7 @@ Nothing is half-built. The tree is clean apart from this handoff. No branches ot
 
 ## Gates
 
-Run on `0eee5e3`. Only this handoff has changed since.
+Run on `0eee5e3`. Harness, firmware and `measure.py --check` were re-run on 9 November on `d825235` after binning ticket 12, with the same firmware address and 19 of 19 passing. `levels.py` wasn't re-run, but `beads_cloud` and `beads_wetdry_wet` are byte-identical to `renders/11-random-grain-level/`. No code has changed since `0eee5e3`.
 
 - Harness: builds with 0 errors or warnings.
 - Firmware: image ends at 0x0805B988, 1553 KB below the settings sector (stock 0x0805ABB0).
@@ -79,9 +78,9 @@ Run on `0eee5e3`. Only this handoff has changed since.
 
 ## Where to look
 
-- `.scratch/soft-character/issues/12-density-as-overlap.md`: the next ticket
-- `.scratch/soft-character/spec.md`, decision 9
-- `beads/dsp/trigger_generator.cc`: `Render`, where Density becomes a rate
-- `beads/dsp/granular_processor.h`: named by `CLAUDE.md` row 9
-- `beads/test/checks.py`: add ticket 12's check here first
+- `.scratch/soft-character/issues/13-stereo-width.md`: the next ticket
+- `.scratch/soft-character/spec.md`, decision 10
+- `beads/dsp/granular_player.h`: `ComputeGrainPan`, named by `CLAUDE.md` row 10
+- `beads/test/checks.py`: add ticket 13's check here first
+- `.scratch/soft-character/issues/12-density-as-overlap.md`: Comments, the binned approach
 - `.scratch/soft-character/issues/11-random-grain-level.md`: Comments, the most recent verdict format
