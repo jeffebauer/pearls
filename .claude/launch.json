@@ -6,6 +6,12 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["beads/test/listen.py"],
       "port": 8765
+    },
+    {
+      "name": "listen-alt",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["beads/test/listen.py", "--port", "8767"],
+      "port": 8767
     }
   ]
 }
