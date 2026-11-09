@@ -57,6 +57,26 @@
     "renders/11-random-grain-level": {
       "label": "11: random grain level",
       "description": "Each grain gets a random level at birth, spread over 6 dB and growing across Density's random half. Make-up gain holds the average, so the cloud keeps its level."
+    },
+    "renders/13-stereo-width": {
+      "label": "13: stereo width",
+      "description": "Pan floor of ±30% plus opposite L/R level of about ±1 dB on the wet path. Mono inputs unchanged."
+    },
+    "renders/13-stereo-width/sweep/before": {
+      "label": "Before 13",
+      "description": "The current firmware without the width change. Every grain dead centre on the clocked patch."
+    },
+    "renders/13-stereo-width/sweep/lr-006": {
+      "label": "Pan floor + L/R ±0.5 dB",
+      "description": "±30% pan floor with a small opposite L/R level per grain."
+    },
+    "renders/13-stereo-width/sweep/lr-012": {
+      "label": "Pan floor + L/R ±1 dB (proposed)",
+      "description": "±30% pan floor with the proposed L/R level per grain."
+    },
+    "renders/13-stereo-width/sweep/lr-024": {
+      "label": "Pan floor + L/R ±2 dB",
+      "description": "±30% pan floor with a stronger opposite L/R level per grain."
     }
   },
 
@@ -102,6 +122,26 @@
     "synth.wav": "Sustained poly synth chords, dry.",
     "groove.wav": "Drum groove with stabs, dry.",
     "beads_shape_088.wav": "Cloud patch, Shape halfway from 3 o'clock to fully clockwise. 10: half Hann-to-Gaussian, half diffuser.",
-    "beads_shape_100.wav": "Cloud patch, Shape fully clockwise. 09: Gaussian. 10: Gaussian with the full diffuser. Stock: reverse."
+    "beads_shape_100.wav": "Cloud patch, Shape fully clockwise. 09: Gaussian. 10: Gaussian with the full diffuser. Stock: reverse.",
+    "groove_clocked.wav": "Drums, clocked, nothing randomised. Near-mono source, so this shows what the grains add: listen for movement across the image.",
+    "guitar_clocked.wav": "Guitar, clocked, nothing randomised. Listen for whether the image opens or closes up.",
+    "synth_clocked.wav": "Synth, clocked, nothing randomised. A very wide source that measures narrower: listen for the image closing in.",
+    "kettel_clocked.wav": "Test source, clocked, nothing randomised. A wide source that measures narrower: listen for the image closing in.",
+    "groove_cloud.wav": "Drums, cloud with Time randomised. Only the L/R level differs much here.",
+    "guitar_cloud.wav": "Guitar, cloud with Time randomised. Only the L/R level differs much here.",
+    "synth_cloud.wav": "Synth, cloud with Time randomised. Only the L/R level differs much here.",
+    "kettel_cloud.wav": "Test source, cloud with Time randomised. Only the L/R level differs much here.",
+    "beads_width_clocked.wav": "Clocked and nothing randomised, on a source summed to mono. The width check's render.",
+    "beads_width_stereo.wav": "Clocked and nothing randomised, on the source as it is.",
+    "beads_width_mono.wav": "Clocked with a mono input. L and R must match exactly.",
+    "beads_width_mono_cloud.wav": "Randomised cloud with a mono input. Must render as it did before ticket 13.",
+    "groove_grains_random.wav": "Drums, 54 ms grains, random timing, Time randomised. Listen for grains scattering wider.",
+    "guitar_grains_random.wav": "Guitar, 54 ms grains, random timing, Time randomised. Listen for grains scattering wider.",
+    "synth_grains_random.wav": "Synth, 54 ms grains, random timing, Time randomised. A wide source: listen for the image closing in.",
+    "kettel_grains_random.wav": "Test source, 54 ms grains, random timing, Time randomised. A wide source: listen for the image closing in.",
+    "groove_grains_regular.wav": "Drums, 54 ms grains, regular timing, Time randomised. The floor does the most here.",
+    "guitar_grains_regular.wav": "Guitar, 54 ms grains, regular timing, Time randomised. The floor does the most here.",
+    "synth_grains_regular.wav": "Synth, 54 ms grains, regular timing, Time randomised. A wide source: listen for the image closing in.",
+    "kettel_grains_regular.wav": "Test source, 54 ms grains, regular timing, Time randomised. A wide source: listen for the image closing in."
   }
 }
