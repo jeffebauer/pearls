@@ -1,7 +1,7 @@
 # 13: Stereo width
 
 Status: ready-for-agent
-Blocked by: 12
+Blocked by: 11 (12 was binned)
 Type: task
 Spec: `../spec.md`, Spec decision 10
 

@@ -28,7 +28,7 @@ Settled by grilling on 8 November 2026. The spec and one ticket per row are in `
 | # | Change | Where |
 | --- | --- | --- |
 | 0 | Measurement setup: a render tool (wet vs dry level, click detector on 1 ms frames, grain attack time), guitar clip 09 as the reference source, reference patches, and Arbhar and Multigrain reference captures | `beads/test/`, `docs/reference-patches.md`, `renders/reference/` |
-| 9 | Density sets overlap rather than grains per second when no clock is patched; clocked behaviour stays stock | `beads/dsp/trigger_generator.cc`, `beads/dsp/granular_processor.h` |
+| 9 | Binned 9 November 2026 after A/B: Density stays grains per second. See ticket 12 | none |
 | 10 | Stereo width: a ±30% pan floor on the wet path plus opposite-polarity random level on L and R; mono stays mono | `beads/dsp/granular_player.h` |
 | 11 | Freeze seam: measure first, and add a crossfade only if the click detector finds a click | `beads/dsp/delay_line.h` |
 | 12 | Pitch quantiser with scale masks: off, chromatic, major, minor, pentatonic, fifths and octaves, octaves. Relative to source pitch. Quantise knob plus CV plus random, once per grain, with hysteresis. Select by holding Quality and turning Pitch. Gets its own short grilling first | `beads/cv_reader.h` (`LAW_DETUNE` table), `beads/dsp/randomized_parameter.h` (`pitch_value()`), speed calc in `beads/dsp/granular_processor.h`, `beads/ui.cc` |
