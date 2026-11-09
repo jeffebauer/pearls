@@ -56,6 +56,12 @@ const float kBusGainSpreadScale = 100.0f;
 // loudest grain: half, 6 dB.
 const float kGrainLevelMaxCut = 0.5f;
 
+// Stereo width (ticket 13), on the delay player's stereo path only. No grain's
+// pan range is narrower than +/-30% of hard left or right, and each grain is up
+// to about 1 dB louder on one side and quieter on the other.
+const float kMinPanSpread = 0.3f;
+const float kGrainLrLevelMax = 0.12f;
+
 struct Parameters {
   RandomizedParameter time;
   RandomizedParameter size;
@@ -127,14 +133,21 @@ class GranularPlayer {
     return num_active_grains;
   }
   
-  // Pan spread stays count-based, as stock.
+  // Pan spread stays count-based, as stock, above min_spread.
   inline float ComputeGrainPan(
       const TriggerGenerator::Output& trigger,
       const Parameters& p,
-      float num_active_grains) {
+      float num_active_grains,
+      float min_spread = 0.0f) {
     const float total_spread = ComputeSpread(trigger, p);
     const float pan_spread = 0.5f * num_active_grains * total_spread;
-    return BoundedRandomFloat(pan_spread);
+    return BoundedRandomFloat(pan_spread, min_spread);
+  }
+
+  // How far a grain being born is tipped towards one side: left gets 1 + this
+  // and right 1 - this, so the two channels stay matched on average.
+  inline float ComputeGrainLrLevel() const {
+    return kGrainLrLevelMax * (2.0f * stmlib::Random::GetFloat() - 1.0f);
   }
 
   // Stock per-grain gain, fixed at birth to 1/sqrt(active grains + 1). Only

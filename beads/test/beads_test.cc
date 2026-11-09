@@ -1145,6 +1145,90 @@ void TestProcessorShapeSweep() {
   }
 }
 
+// A fully wet render for measuring stereo width (ticket 13). A clock of 25 Hz
+// with Density at 0 fires every pulse with no randomness, so without a pan
+// floor every grain is dead centre. sum_source feeds the same signal to both
+// inputs: most stereo sources already differ between L and R, which hides what
+// the grains add.
+void RenderWidthPath(const char* filename, bool mono, bool sum_source,
+                     bool clocked, float density, const Parameters& p) {
+  const int seconds = 15;
+  const int clock_period = 1920;
+  WavWriter wav_writer(2, kSampleRate, seconds);
+  wav_writer.Open(filename);
+  AudioSource audio_source("audio_samples/kettel.wav");
+
+  Processor proc;
+  proc.Init(buffers, reverb_buffer);
+  proc.Configure(Processor::MEDIA_DIGITAL, mono);
+
+  Processor::MixParameters m;
+  m.feedback = 0.0f;
+  m.dry_wet = 1.0f;
+  m.reverb_amount = 0.0f;
+  m.output_gate = false;
+
+  ModulatedParameter d;
+  d.base = density;
+  d.cv = 0.0f;
+
+  GateFlags previous = GATE_FLAG_LOW;
+  int clock = 0;
+  for (size_t i = 0; i < kSampleRate * seconds; i += kBlockSize) {
+    FloatFrame in[kBlockSize];
+    bool freeze[kBlockSize];
+    FloatFrame frames[kBlockSize];
+    GateFlags flags[kBlockSize];
+
+    audio_source.Read(in, kBlockSize);
+    for (size_t j = 0; j < kBlockSize; ++j) {
+      if (sum_source) {
+        in[j].l = in[j].r = 0.5f * (in[j].l + in[j].r);
+      }
+      previous = ExtractGateFlags(previous, clock < clock_period / 2);
+      flags[j] = previous;
+      clock = (clock + 1) % clock_period;
+    }
+
+    fill(&freeze[0], &freeze[kBlockSize], false);
+    proc.Process(
+        SEED_BUTTON_STATE_LOCKED,
+        clocked ? flags : NULL,
+        freeze,
+        d, p, m,
+        in, frames, kBlockSize);
+    wav_writer.Write(&(frames[0].l), kBlockSize * 2);
+  }
+}
+
+// Stereo width (ticket 13): an unrandomised clocked cloud on a source with no
+// stereo of its own, the same with a mono input, and a randomised cloud with a
+// mono input, which must render as it did before the change. The mono renders
+// go first: the stereo ones take more random draws, which would shift them.
+void TestProcessorWidth() {
+  Parameters p = FixedWetPatch();
+  p.shape.base = 0.75f;
+  RenderWidthPath("beads_width_mono.wav", true, false, true, 0.0f, p);
+  p.time.attenuverter = 0.25f;
+  RenderWidthPath("beads_width_mono_cloud.wav", true, false, false, 0.9f, p);
+  p.time.attenuverter = 0.0f;
+  RenderWidthPath("beads_width_clocked.wav", false, true, true, 0.0f, p);
+  // The same patch on the source as it is, for listening.
+  RenderWidthPath("beads_width_stereo.wav", false, false, true, 0.0f, p);
+}
+
+// Listening patches that sound granular (ticket 13): grains of about 54 ms, Time
+// randomised, at Hann, about 25 grains a second. Density's random half first,
+// then its regular half, where only the Time spread feeds the pan spread.
+void TestProcessorGrains() {
+  Parameters p = FixedWetPatch();
+  p.size.base = 0.55f;
+  p.shape.base = 0.75f;
+  p.time.attenuverter = 0.25f;
+  RenderProcessorPath("beads_grains_random.wav", 1.0f, NULL, 0.9f, 30, 1.0f, p);
+  RenderProcessorPath("beads_grains_regular.wav", 1.0f, NULL, 0.15f, 30, 1.0f, p);
+}
+
 // One impulse down the left of a diffuser that's already fully in.
 static void DiffuserImpulse(Diffuser* diffuser, int length, vector<float>* out) {
   out->clear();
@@ -1178,11 +1262,12 @@ static float EnergyCentroid(const vector<float>& v) {
 // Renders separated grains of a DC source and reports the quietest and loudest
 // grain and their mean against reference, the peak of a grain with no random
 // level. Grains don't overlap, so the bus gain stays at 1 and each peak is the
-// grain's level.
+// grain's level. The delay line is mono so the stereo width stages (ticket 13),
+// which also move a grain's level, stay out of the measurement.
 float RenderGrainLevels(float level_spread, float reference,
                         float* lowest, float* highest, float* mean,
                         WavWriter* wav) {
-  static beads::DelayLine<RESOLUTION_16_BIT, 48000, 2> delay_line;
+  static beads::DelayLine<RESOLUTION_16_BIT, 48000, 1> delay_line;
   static DelayGranularPlayer player;
   delay_line.Init(buffers);
   player.Init(48000.0f);
@@ -2708,6 +2793,8 @@ const NamedTest kTests[] = {
   { "TestPanMatrix", &TestPanMatrix },
   { "TestGrainEnvelopeShape", &TestGrainEnvelopeShape },
   { "TestProcessorShapeSweep", &TestProcessorShapeSweep },
+  { "TestProcessorWidth", &TestProcessorWidth },
+  { "TestProcessorGrains", &TestProcessorGrains },
   { "TestDiffuser", &TestDiffuser },
   { "TestGrainLevel", &TestGrainLevel },
   { "TestGrainFade", &TestGrainFade },

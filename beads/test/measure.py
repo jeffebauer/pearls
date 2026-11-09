@@ -205,6 +205,19 @@ def read_values(path):
                 (line.strip().split(",") for line in f if line.strip())}
 
 
+def width(chans):
+    """(L/R correlation, side level against mid in dB, largest |L - R|)."""
+    left, right = chans[0], chans[1]
+    ll = sum(a * a for a in left)
+    rr = sum(b * b for b in right)
+    lr = sum(a * b for a, b in zip(left, right))
+    correlation = lr / math.sqrt(ll * rr) if ll > 0.0 and rr > 0.0 else 1.0
+    mid = ll + rr + 2.0 * lr
+    side = ll + rr - 2.0 * lr
+    side_mid = 10.0 * math.log10(max(side, 1e-12) / max(mid, 1e-12))
+    return correlation, side_mid, max(abs(a - b) for a, b in zip(left, right))
+
+
 def measure_file(path):
     rate, chans = read_wav(path)
     frame = max(1, rate // 1000)
@@ -219,6 +232,8 @@ def measure_file(path):
         "clipped": clipped,
         "clicks": clicks(rms_frames, hf),
     }
+    if len(chans) == 2:
+        m["lr_correlation"], m["side_mid_db"], m["lr_max_diff"] = width(chans)
     if path.endswith("_wet.wav"):
         csv = path[:-len(".wav")] + "_attacks.csv"
         if os.path.exists(csv):
@@ -255,6 +270,9 @@ def report(metrics, out=sys.stdout):
               % (m["seconds"], m["peak_dbfs"], m["rms_dbfs"], m["gated_rms_dbfs"],
                  m["clipped"]), file=out)
         print("  clicks %d%s" % (len(c), ("  at " + stamps) if c else ""), file=out)
+        if "lr_correlation" in m:
+            print("  L/R correlation %.4f  side - mid %.1f dB"
+                  % (m["lr_correlation"], m["side_mid_db"]), file=out)
         if "attacks_ms" in m:
             a = m["attacks_ms"]
             if a:

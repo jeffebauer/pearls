@@ -47,10 +47,10 @@ inline float PseudoGaussian() {
   return u * (u * (4.0f * u - 6.0f) + 4.0f) - 1.0f;
 }
 
-inline float BoundedRandomFloat(float spread) {
+inline float BoundedRandomFloat(float spread, float min_spread = 0.0f) {
   const float u = stmlib::Random::GetFloat();
   const float v = stmlib::Random::GetFloat();
-  return 0.5f + (u - 0.5f) * std::min(spread * v, 1.0f);
+  return 0.5f + (u - 0.5f) * std::min(std::max(spread * v, min_spread), 1.0f);
 }
 
 

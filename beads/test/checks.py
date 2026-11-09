@@ -320,6 +320,23 @@ def grain_level_none_when_regular(m):
         "no depth on the regular half, at noon or below it under CV")
 
 
+# Ticket 13: both inputs carry the same signal and nothing is randomised, so
+# without a pan floor the output is exactly mono (correlation 1, no side).
+MIN_CLOCKED_SIDE_DB = -30.0
+
+
+def clocked_cloud_is_wide(m):
+    w = m["beads_width_clocked.wav"]
+    return w["side_mid_db"] >= MIN_CLOCKED_SIDE_DB and w["lr_correlation"] < 1.0, (
+        "side - mid %.1f dB (needs %.1f or more), L/R correlation %.4f"
+        % (w["side_mid_db"], MIN_CLOCKED_SIDE_DB, w["lr_correlation"]))
+
+
+def mono_stays_mono(m):
+    diff = m["beads_width_mono.wav"]["lr_max_diff"]
+    return diff == 0.0, "largest L - R with a mono input %.6f" % diff
+
+
 CHECKS = [
     # Ticket 01 (fails on stock); ticket 04 should make it pass.
     Check("wet and dry within 1 dB at 12 o'clock",
@@ -378,4 +395,11 @@ CHECKS = [
     # first check to prove the level is really being applied.
     Check("no random grain level on the regular half or at noon",
           ["TestGrainLevel"], grain_level_none_when_regular),
+    # Ticket 13 (fails before the change: exactly mono).
+    Check("unrandomised clocked cloud is wide on a mono-summed source",
+          ["TestProcessorWidth"], clocked_cloud_is_wide),
+    # Ticket 13 guard: passes before the change by design, so it leans on the
+    # check above to prove the width is really being applied.
+    Check("mono input stays mono with nothing randomised",
+          ["TestProcessorWidth"], mono_stays_mono),
 ]

@@ -53,9 +53,14 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
 
       // The bus gain below normalises the sum of the envelopes, not the levels.
       const float amplitude = ComputeGrainLevel(trigger);
+      // A mono input skips both width stages, random draws included, so it
+      // renders exactly as it did without them.
+      const bool stereo = DelayLineType::NUM_CHANNELS == 2;
       const float pan = ComputeGrainPan(
-          trigger, p, float(CountActiveGrains() + 1));
-      
+          trigger, p, float(CountActiveGrains() + 1),
+          stereo ? kMinPanSpread : 0.0f);
+      const float lr_level = stereo ? ComputeGrainLrLevel() : 0.0f;
+
       const int safety = DelayGrain::head_crossing_safety_zone + 1;
       const int max_delay = delay_line->duration() - 2 * safety;
 
@@ -66,7 +71,8 @@ class DelayGranularPlayer : public GranularPlayer<DelayGrain, 32> {
           ComputeGrainDuration(duration),
           p.shape.value(),
           amplitude, pan,
-          trigger.fractional_sample);
+          trigger.fractional_sample,
+          lr_level);
       SortGrainList(p.monophonic_mode);
     }
 

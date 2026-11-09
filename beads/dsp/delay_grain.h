@@ -77,7 +77,8 @@ class DelayGrain : public Grain {
       float shape,
       float gain,
       float pan,
-      float fractional_sample) {
+      float fractional_sample,
+      float lr_level = 0.0f) {
     float consumption_speed = speed - (delay_line->frozen() ? 0.0f : 1.0f);
     delay -= fractional_sample * consumption_speed;
 
@@ -118,6 +119,10 @@ class DelayGrain : public Grain {
         gain_[0][0] = pan * (2.0f - pan) * gain;
         gain_[1][0] = (1.0f - pan) * (1.0f + pan) * gain;
       }
+      gain_[0][0] *= 1.0f + lr_level;
+      gain_[0][1] *= 1.0f + lr_level;
+      gain_[1][0] *= 1.0f - lr_level;
+      gain_[1][1] *= 1.0f - lr_level;
     } else {
       gain_[1][0] = pan * (2.0f - pan) * gain;
       gain_[0][0] = (1.0f - pan) * (1.0f + pan) * gain;
