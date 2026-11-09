@@ -30,7 +30,7 @@ Settled by grilling on 8 November 2026. The spec and one ticket per row are in `
 | 0 | Measurement setup: a render tool (wet vs dry level, click detector on 1 ms frames, grain attack time), guitar clip 09 as the reference source, reference patches, and Arbhar and Multigrain reference captures | `beads/test/`, `docs/reference-patches.md`, `renders/reference/` |
 | 9 | Binned 9 November 2026 after A/B: Density stays grains per second. See ticket 12 | none |
 | 10 | Done in `cee1b1c`: ±30% pan floor plus opposite L/R level of about ±1 dB; mono stays mono. See ticket 13 | `beads/dsp/granular_player.h`, `beads/dsp/delay_grain.h` |
-| 11 | Freeze seam: measure first, and add a crossfade only if the click detector finds a click | `beads/dsp/delay_line.h` |
+| 11 | Measured 9 November 2026: no click at the freeze seam, so no crossfade. See ticket 14 | none |
 | 12 | Pitch quantiser with scale masks: off, chromatic, major, minor, pentatonic, fifths and octaves, octaves. Relative to source pitch. Quantise knob plus CV plus random, once per grain, with hysteresis. Select by holding Quality and turning Pitch. Gets its own short grilling first | `beads/cv_reader.h` (`LAW_DETUNE` table), `beads/dsp/randomized_parameter.h` (`pitch_value()`), speed calc in `beads/dsp/granular_processor.h`, `beads/ui.cc` |
 
 Rows 1–8 are done: see `git log` and the tickets in `.scratch/soft-character/issues/`. CPU on the debug pin is still to measure for 2, 6, 7, 8 and 10.

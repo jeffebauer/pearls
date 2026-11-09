@@ -1229,6 +1229,127 @@ void TestProcessorGrains() {
   RenderProcessorPath("beads_grains_regular.wav", 1.0f, NULL, 0.15f, 30, 1.0f, p);
 }
 
+// The frozen buffer's seam, where the newest sample meets the oldest (ticket
+// 14). 20 s, fully wet: 10 s to fill the buffer, then Freeze held for the rest
+// (or toggled every 1.5 s). The source is a steady sine by default because a
+// seam on it is a step in otherwise smooth audio, the easiest thing for the
+// click detector to see. Without Freeze it's the control for the same patch.
+void RenderFreezeSeam(const char* filename, const Parameters& p, float density,
+                      bool frozen, bool toggle, bool sine) {
+  const int seconds = 20;
+  WavWriter wav_writer(2, kSampleRate, seconds);
+  wav_writer.Open(filename);
+  AudioSource audio_source("audio_samples/kettel.wav");
+
+  Processor proc;
+  proc.Init(buffers, reverb_buffer);
+  proc.Configure(Processor::MEDIA_DIGITAL, false);
+
+  Processor::MixParameters m;
+  m.feedback = 0.0f;
+  m.dry_wet = 1.0f;
+  m.reverb_amount = 0.0f;
+  m.output_gate = false;
+
+  ModulatedParameter d;
+  d.base = density;
+  d.cv = 0.0f;
+
+  float phase = 0.0f;
+  for (size_t i = 0; i < kSampleRate * seconds; i += kBlockSize) {
+    FloatFrame in[kBlockSize];
+    bool freeze[kBlockSize];
+    FloatFrame frames[kBlockSize];
+
+    audio_source.Read(in, kBlockSize);
+    if (sine) {
+      for (size_t j = 0; j < kBlockSize; ++j) {
+        phase += 223.7f / kSampleRate;
+        if (phase >= 1.0f) phase -= 1.0f;
+        in[j].l = in[j].r = 0.4f * sinf(phase * 2.0f * float(M_PI));
+      }
+    }
+    bool held = frozen && i >= kSampleRate * 10;
+    if (toggle) {
+      held = i >= kSampleRate * 10 && ((i / (kSampleRate * 3 / 2)) % 2) == 0;
+    }
+    fill(&freeze[0], &freeze[kBlockSize], held);
+    proc.Process(
+        SEED_BUTTON_STATE_LOCKED,
+        NULL,
+        freeze,
+        d, p, m,
+        in, frames, kBlockSize);
+    wav_writer.Write(&(frames[0].l), kBlockSize * 2);
+  }
+}
+
+// Reads straight through the seam of a frozen line once a second, with no fade.
+// This proves the click detector can see a seam at all.
+void RenderFreezeSeamStep() {
+  static beads::DelayLine<RESOLUTION_16_BIT, 48000, 2> delay_line;
+  delay_line.Init(buffers);
+  float phase = 0.0f;
+  for (int i = 0; i < 60000; ++i) {
+    phase += 223.7f / kSampleRate;
+    if (phase >= 1.0f) phase -= 1.0f;
+    FloatFrame f;
+    f.l = f.r = 0.4f * sinf(phase * 2.0f * float(M_PI));
+    delay_line.Write(f, false);
+  }
+  const int seconds = 4;
+  WavWriter wav_writer(2, kSampleRate, seconds);
+  wav_writer.Open("beads_seam_step.wav");
+  int delay = 24000;
+  for (size_t i = 0; i < kSampleRate * seconds; ++i) {
+    FloatFrame o = delay_line.Read<INTERPOLATION_HERMITE>(delay, 0.0f);
+    wav_writer.Write(&o.l, &o.r, 1);
+    if (--delay < 0) delay += 48000;
+  }
+}
+
+void TestProcessorFreezeSeam() {
+  RenderFreezeSeamStep();
+  struct {
+    const char* name;
+    float size;
+    float pitch;
+  } cases[] = {
+    { "short", 0.6f, 0.0f },    // Grains land all over the buffer.
+    { "long", 0.9f, 0.0f },     // About 1.5 s, so they near the seam often.
+    { "reverse", 0.2f, 0.0f },  // Reversed, running away from the head.
+    { "up", 0.6f, 12.0f },      // Twice as fast towards the head.
+    { "down", 0.6f, -12.0f },
+    { "delay", 1.0f, 0.0f },    // Delay mode, which loops the buffer.
+  };
+  for (size_t c = 0; c < sizeof(cases) / sizeof(cases[0]); ++c) {
+    Parameters p = FixedWetPatch();
+    p.time.base = 0.5f;
+    p.time.attenuverter = cases[c].size < 1.0f ? 1.0f : 0.0f;
+    p.size.base = cases[c].size;
+    p.shape.base = 0.75f;
+    p.pitch.base = cases[c].pitch;
+    char filename[64];
+    snprintf(filename, sizeof(filename), "beads_seam_%s_freeze.wav", cases[c].name);
+    RenderFreezeSeam(filename, p, 0.9f, true, false, true);
+    snprintf(filename, sizeof(filename), "beads_seam_%s_control.wav", cases[c].name);
+    RenderFreezeSeam(filename, p, 0.9f, false, false, true);
+  }
+  // Freeze toggled, so the freeze tail's crossfade runs, and a real source.
+  Parameters p = FixedWetPatch();
+  p.time.base = 0.5f;
+  p.time.attenuverter = 1.0f;
+  p.size.base = 0.6f;
+  p.shape.base = 0.75f;
+  RenderFreezeSeam("beads_seam_toggle_freeze.wav", p, 0.9f, true, true, true);
+  RenderFreezeSeam("beads_seam_real_freeze.wav", p, 0.9f, true, false, false);
+  RenderFreezeSeam("beads_seam_real_control.wav", p, 0.9f, false, false, false);
+  p.time.attenuverter = 0.0f;
+  p.size.base = 1.0f;
+  RenderFreezeSeam("beads_seam_real_delay_freeze.wav", p, 0.9f, true, false, false);
+  RenderFreezeSeam("beads_seam_real_delay_control.wav", p, 0.9f, false, false, false);
+}
+
 // One impulse down the left of a diffuser that's already fully in.
 static void DiffuserImpulse(Diffuser* diffuser, int length, vector<float>* out) {
   out->clear();
@@ -2795,6 +2916,7 @@ const NamedTest kTests[] = {
   { "TestProcessorShapeSweep", &TestProcessorShapeSweep },
   { "TestProcessorWidth", &TestProcessorWidth },
   { "TestProcessorGrains", &TestProcessorGrains },
+  { "TestProcessorFreezeSeam", &TestProcessorFreezeSeam },
   { "TestDiffuser", &TestDiffuser },
   { "TestGrainLevel", &TestGrainLevel },
   { "TestGrainFade", &TestGrainFade },
